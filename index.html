@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Indian Market Backtester (Zero-Python)</title>
+  <!-- TradingView Lightweight Charts Library -->
+  <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #131722;
+      color: #d1d4dc;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      background: #1e222d;
+      padding: 14px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    input, select, button {
+      background: #2a2e39;
+      color: #fff;
+      border: 1px solid #363c4e;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+    button {
+      background: #2962ff;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #1e4bd8; }
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stat-box {
+      background: #1e222d;
+      border: 1px solid #2a2e39;
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .stat-label { font-size: 11px; text-transform: uppercase; color: #787b86; }
+    .stat-val { font-size: 18px; font-weight: bold; margin-top: 4px; }
+    .green { color: #26a69a; }
+    .red { color: #ef5350; }
+    #chart {
+      width: 100%;
+      height: 540px;
+      background: #1e222d;
+      border-radius: 6px;
+      border: 1px solid #2a2e39;
+    }
+    .file-label {
+      cursor: pointer;
+      background: #363c4e;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="controls">
+    <label>NSE Ticker:
+      <input id="ticker" type="text" value="RELIANCE.NS" placeholder="e.g. TCS.NS, INFY.NS" />
+    </label>
+    <label>Range:
+      <select id="range">
+        <option value="6mo">6 Months</option>
+        <option value="1y" selected>1 Year</option>
+        <option value="2y">2 Years</option>
+      </select>
+    </label>
+    <label>Fast MA:
+      <input id="fastMa" type="number" value="20" style="width: 55px;" />
+    </label>
+    <label>Slow MA:
+      <input id="slowMa" type="number" value="50" style="width: 55px;" />
+    </label>
+    <button onclick="fetchAndTest()">Run Backtest</button>
+
+    <span style="color:#787b86;">|</span>
+
+    <label class="file-label">
+      Upload Zerodha/NSE CSV
+      <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="loadCSV(event)" />
+    </label>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-box">
+      <div class="stat-label">Initial Capital</div>
+      <div class="stat-val" id="dispInit">₹1,00,000</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Final Value</div>
+      <div class="stat-val" id="dispFinal">₹0.00</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Total Return</div>
+      <div class="stat-val" id="dispReturn">0.00%</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Win Rate</div>
+      <div class="stat-val" id="dispWinRate">0.00%</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Total Trades</div>
+      <div class="stat-val" id="dispTrades">0</div>
+    </div>
+  </div>
+
+  <div id="chart"></div>
+
+  <script>
+    let chart, candleSeries, fastLine, slowLine;
+
+    function initChart() {
+      const container = document.getElementById('chart');
+      container.innerHTML = "";
+      chart = LightweightCharts.createChart(container, {
+        width: container.clientWidth,
+        height: 540,
+        layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
+        grid: { vertLines: { color: '#242732' }, horzLines: { color: '#242732' } },
+        timeScale: { borderColor: '#363c4e' },
+      });
+      candleSeries = chart.addCandlestickSeries({
+        upColor: '#26a69a', downColor: '#ef5350',
+        wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+        borderVisible: false
+      });
+      fastLine = chart.addLineSeries({ color: '#2962ff', lineWidth: 1.5 });
+      slowLine = chart.addLineSeries({ color: '#ff9800', lineWidth: 1.5 });
+
+      window.addEventListener('resize', () => chart.applyOptions({ width: container.clientWidth }));
+    }
+
+    // Pure JS Moving Average
+    function calcSMA(data, window) {
+      const result = [];
+      for (let i = 0; i < data.length; i++) {
+        if (i < window - 1) continue;
+        let sum = 0;
+        for (let j = 0; j < window; j++) sum += data[i - j].close;
+        result.push({ time: data[i].time, value: +(sum / window).toFixed(2) });
+      }
+      return result;
+    }
+
+    // In-Browser Strategy Execution
+    function simulateStrategy(candles, fastP, slowP) {
+      const fastMap = new Map(calcSMA(candles, fastP).map(d => [d.time, d.value]));
+      const slowMap = new Map(calcSMA(candles, slowP).map(d => [d.time, d.value]));
+
+      let capital = 100000;
+      let pos = 0;
+      let entryPrice = 0;
+      let wins = 0, closedTrades = 0;
+      const markers = [];
+
+      for (let i = 1; i < candles.length; i++) {
+        const t = candles[i].time;
+        const prevT = candles[i - 1].time;
+        const fNow = fastMap.get(t), sNow = slowMap.get(t);
+        const fPrev = fastMap.get(prevT), sPrev = slowMap.get(prevT);
+
+        if (!fNow || !sNow || !fPrev || !sPrev) continue;
+
+        // Bullish Crossover -> Buy
+        if (fPrev <= sPrev && fNow > sNow && pos === 0) {
+          pos = Math.floor(capital / candles[i].close);
+          if (pos > 0) {
+            entryPrice = candles[i].close;
+            capital -= pos * entryPrice;
+            markers.push({
+              time: t, position: 'belowBar', color: '#26a69a', shape: 'arrowUp',
+              text: `BUY @ ₹${entryPrice.toFixed(1)}`
+            });
+          }
+        }
+        // Bearish Crossover -> Sell
+        else if (fPrev >= sPrev && fNow < sNow && pos > 0) {
+          const proceeds = pos * candles[i].close;
+          capital += proceeds;
+          closedTrades++;
+          if (candles[i].close > entryPrice) wins++;
+          markers.push({
+            time: t, position: 'aboveBar', color: '#ef5350', shape: 'arrowDown',
+            text: `SELL @ ₹${candles[i].close.toFixed(1)}`
+          });
+          pos = 0;
+        }
+      }
+
+      // Close open positions at final bar
+      if (pos > 0) {
+        capital += pos * candles[candles.length - 1].close;
+      }
+
+      const totalReturn = ((capital - 100000) / 100000) * 100;
+      const winRate = closedTrades > 0 ? (wins / closedTrades) * 100 : 0;
+
+      // Update UI
+      const finalEl = document.getElementById('dispFinal');
+      finalEl.innerText = `₹${capital.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+      finalEl.className = `stat-val ${capital >= 100000 ? 'green' : 'red'}`;
+
+      const retEl = document.getElementById('dispReturn');
+      retEl.innerText = `${totalReturn.toFixed(2)}%`;
+      retEl.className = `stat-val ${totalReturn >= 0 ? 'green' : 'red'}`;
+
+      document.getElementById('dispWinRate').innerText = `${winRate.toFixed(1)}%`;
+      document.getElementById('dispTrades').innerText = closedTrades;
+
+      // Plot series
+      initChart();
+      candleSeries.setData(candles);
+      fastLine.setData(Array.from(fastMap, ([time, value]) => ({ time, value })));
+      slowLine.setData(Array.from(slowMap, ([time, value]) => ({ time, value })));
+      candleSeries.setMarkers(markers);
+      chart.timeScale().fitContent();
+    }
+
+    // Direct Browser Fetch via Public Proxy
+    async function fetchAndTest() {
+      let symbol = document.getElementById('ticker').value.trim();
+      if (!symbol.includes('.')) symbol += '.NS';
+      const range = document.getElementById('range').value;
+      const fVal = parseInt(document.getElementById('fastMa').value);
+      const sVal = parseInt(document.getElementById('slowMa').value);
+
+      const target = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${range}&interval=1d`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
+
+      try {
+        const res = await fetch(proxyUrl);
+        const data = await res.json();
+        const resObj = data.chart.result[0];
+        const timestamps = resObj.timestamp;
+        const q = resObj.indicators.quote[0];
+
+        const candles = [];
+        for (let i = 0; i < timestamps.length; i++) {
+          if (q.open[i] && q.close[i]) {
+            const d = new Date(timestamps[i] * 1000);
+            candles.push({
+              time: d.toISOString().split('T')[0],
+              open: +q.open[i].toFixed(2),
+              high: +q.high[i].toFixed(2),
+              low: +q.low[i].toFixed(2),
+              close: +q.close[i].toFixed(2)
+            });
+          }
+        }
+        simulateStrategy(candles, fVal, sVal);
+      } catch (err) {
+        alert("Failed to load live data. You can export a CSV from Kite/Groww and click 'Upload CSV' instead.");
+      }
+    }
+
+    // Offline CSV Parser (Zerodha Kite & NSE format)
+    function loadCSV(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const lines = e.target.result.split('\n');
+        const candles = [];
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(',');
+          if (cols.length >= 5) {
+            candles.push({
+              time: cols[0].trim().split(' ')[0],
+              open: parseFloat(cols[1]),
+              high: parseFloat(cols[2]),
+              low: parseFloat(cols[3]),
+              close: parseFloat(cols[4])
+            });
+          }
+        }
+        simulateStrategy(candles, 20, 50);
+      };
+      reader.readAsText(file);
+    }
+
+    window.onload = fetchAndTest;
+  </script>
+</body>
+</html>
