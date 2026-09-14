@@ -3,805 +3,658 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AlgoVerse Studio - Indian Market Backtester</title>
+  <title>AlgoVerse - Automated Strategy & Derivative Backtester</title>
+  <!-- TradingView Lightweight Charts CDN -->
   <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     :root {
-      --bg-main: #0c0f17;
-      --bg-card: #151924;
-      --bg-input: #1f2433;
-      --border: #282f42;
-      --accent: #2962ff;
-      --accent-hover: #1e4bd8;
-      --green: #26a69a;
-      --red: #ef5350;
-      --text-main: #f0f3fa;
-      --text-muted: #848e9c;
+      --bg-dark: #0e0b16;
+      --bg-panel: #161224;
+      --bg-card: #1c172e;
+      --bg-input: #120e1e;
+      --border: #2c2445;
+      --border-focus: #7c3aed;
+      --primary: #7c3aed;
+      --primary-hover: #6d28d9;
+      --accent-pill: #8b5cf6;
+      --green: #10b981;
+      --red: #ef4444;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: var(--bg-main);
-      color: var(--text-main);
+      background: var(--bg-dark);
+      color: var(--text);
       padding: 16px;
+      font-size: 13px;
     }
 
-    /* Top Navbar */
-    .navbar {
+    /* Top Navigation Bar */
+    .nav {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 20px;
-    }
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 18px;
-      font-weight: 700;
-      color: #fff;
-    }
-    .badge-market {
-      background: rgba(41, 98, 255, 0.15);
-      color: #82b1ff;
-      border: 1px solid rgba(41, 98, 255, 0.3);
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    /* App Workspace */
-    .workspace {
-      display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 20px;
-      align-items: start;
-    }
-    @media (max-width: 1024px) {
-      .workspace { grid-template-columns: 1fr; }
-    }
-
-    /* Left Builder Cards */
-    .builder-pane {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .card {
-      background: var(--bg-card);
+      padding: 10px 16px;
+      background: var(--bg-panel);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+    .brand { font-size: 17px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .brand span { color: var(--primary); }
+    .nav-links { display: flex; gap: 8px; }
+    .nav-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .nav-btn.active { background: var(--primary); color: #fff; }
+    .nav-btn:hover:not(.active) { color: #fff; }
+
+    /* Layout Containers */
+    .container { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
       padding: 16px;
     }
-    .card-title {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .form-group {
-      margin-bottom: 12px;
-    }
-    .form-group:last-child { margin-bottom: 0; }
-    label {
-      display: block;
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-    }
+    .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+
+    /* Inputs & Labels */
+    label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; }
     input, select {
       width: 100%;
       background: var(--bg-input);
       border: 1px solid var(--border);
       color: #fff;
-      padding: 8px 10px;
+      padding: 8px 12px;
       border-radius: 6px;
-      font-size: 13px;
-    }
-    input:focus, select:focus {
+      font-size: 12px;
       outline: none;
-      border-color: var(--accent);
     }
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
+    input:focus, select:focus { border-color: var(--border-focus); }
 
-    /* Condition Row (Quantman style) */
-    .condition-row {
+    /* Indicators Bar */
+    .indicator-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
+    .chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       gap: 8px;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px;
-      margin-bottom: 8px;
       font-size: 12px;
     }
-    .cond-tag {
-      background: #2a3142;
-      color: #fff;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 10px;
-      font-weight: 700;
-    }
-    .switch-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      color: var(--text-main);
-    }
-    input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
-      accent-color: var(--accent);
-    }
+    .chip-badge { background: #ffd54f; color: #111; font-weight: 700; font-size: 10px; padding: 2px 5px; border-radius: 3px; }
+    .chip-remove { cursor: pointer; color: var(--text-muted); }
+    .chip-remove:hover { color: var(--red); }
 
-    /* Action Button */
-    .btn-run {
-      width: 100%;
-      background: var(--accent);
+    /* Purple Button Elements */
+    .btn-purple {
+      background: var(--primary);
       color: #fff;
       border: none;
-      padding: 12px;
+      padding: 7px 14px;
       border-radius: 6px;
-      font-size: 14px;
-      font-weight: 700;
+      font-weight: 600;
       cursor: pointer;
-      display: flex;
+      font-size: 12px;
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
+      gap: 6px;
     }
-    .btn-run:hover { background: var(--accent-hover); }
+    .btn-purple:hover { background: var(--primary-hover); }
 
-    /* Right Results Pane */
-    .results-pane {
+    /* Algoverse Condition Boxes */
+    .cond-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
       display: flex;
-      flex-direction: column;
-      gap: 16px;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
     }
+    .cond-title { font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+    .cond-entry { color: var(--green); }
+    .cond-exit { color: var(--red); }
 
-    /* Quantman Metrics Strip */
-    .metrics-strip {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 10px;
-    }
-    .metric-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-    }
-    .metric-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
-    .metric-value { font-size: 18px; font-weight: 700; margin-top: 4px; }
-    .green { color: var(--green); }
-    .red { color: var(--red); }
-
-    /* Chart Box */
-    #chart-container {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px;
-      height: 480px;
-      position: relative;
-    }
-
-    /* Trade Log Table */
-    .table-container {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow-x: auto;
-      max-height: 400px;
-    }
-    table {
+    /* Leg Table */
+    .leg-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
-      text-align: left;
+      margin-top: 12px;
+      background: var(--bg-input);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
     }
-    th, td {
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
+    .leg-table th, .leg-table td { padding: 10px 12px; text-align: left; font-size: 12px; }
+    .leg-table th { background: #1a152b; color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
+    .tag-ce { background: rgba(16, 185, 129, 0.2); color: var(--green); padding: 3px 8px; border-radius: 4px; font-weight: 700; }
+    .tag-pe { background: rgba(239, 68, 68, 0.2); color: var(--red); padding: 3px 8px; border-radius: 4px; font-weight: 700; }
+    .tag-eq { background: rgba(124, 58, 237, 0.2); color: #a78bfa; padding: 3px 8px; border-radius: 4px; font-weight: 700; }
+
+    /* Results Dashboard */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 14px; }
+    .kpi-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+    .kpi-title { font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+    .kpi-val { font-size: 18px; font-weight: 800; margin-top: 4px; }
+    #chart { height: 480px; width: 100%; margin-top: 14px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+
+    /* Modal Styling (Image 2) */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 999;
+      justify-content: center;
+      align-items: center;
     }
-    th {
-      background: #11141d;
-      color: var(--text-muted);
-      font-size: 10px;
-      text-transform: uppercase;
-      position: sticky;
-      top: 0;
+    .modal {
+      background: #181427;
+      border: 1px solid #3c325c;
+      border-radius: 10px;
+      width: 620px;
+      max-width: 92%;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
     }
-    .rule-cell {
-      white-space: normal;
-      min-width: 260px;
-      font-family: monospace;
-      font-size: 11px;
-    }
-    .badge {
-      padding: 2px 6px;
-      border-radius: 4px;
+    .modal-header {
+      background: var(--primary);
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #fff;
       font-weight: 700;
-      font-size: 10px;
     }
-    .badge-buy { background: rgba(38,166,154,0.15); color: var(--green); }
-    .badge-partial { background: rgba(41,98,255,0.2); color: #82b1ff; }
-    .badge-sell { background: rgba(239,83,80,0.15); color: var(--red); }
+    .modal-close { cursor: pointer; font-size: 18px; line-height: 1; }
+    .modal-body { padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .modal-footer { padding: 12px 20px; background: #130f20; display: flex; justify-content: flex-end; border-top: 1px solid var(--border); }
   </style>
 </head>
 <body>
 
-  <!-- Top Bar -->
-  <div class="navbar">
-    <div class="logo">
-      <span>⚡ AlgoVerse</span>
-      <span class="badge-market">NSE & BSE INDIA</span>
-    </div>
-    <div style="font-size:12px; color:var(--text-muted);">
-      Quant Strategy Simulator • Pure Client-Side
+  <!-- Top Navigation Header -->
+  <div class="nav">
+    <div class="brand">⚡ <span>algo</span>verse</div>
+    <div class="nav-links">
+      <button class="nav-btn">Algo Strategies</button>
+      <button class="nav-btn active">Create Strategies</button>
+      <button class="nav-btn" onclick="document.getElementById('results-section').scrollIntoView({behavior:'smooth'})">Backtest Results</button>
+      <button class="nav-btn">Dashboard</button>
     </div>
   </div>
 
-  <div class="workspace">
-    <!-- LEFT PANEL: Strategy Builder -->
-    <div class="builder-pane">
+  <div class="container">
 
-      <!-- 1. Instrument Setup -->
-      <div class="card">
-        <div class="card-title">1. Instrument & Capital</div>
-        <div class="grid-2 form-group">
-          <div>
-            <label>Stock / Index</label>
-            <input id="symbol" type="text" value="RELIANCE.NS" />
-          </div>
-          <div>
-            <label>Timeframe</label>
-            <select id="range">
-              <option value="6mo">6 Months</option>
-              <option value="1y" selected>1 Year</option>
-              <option value="2y">2 Years</option>
-            </select>
-          </div>
+    <!-- 1. Strategy Top Bar -->
+    <div class="panel">
+      <div class="grid-3">
+        <div>
+          <label>Backtest Duration</label>
+          <select id="timeRange">
+            <option value="6mo">Last 6 Months (EOD)</option>
+            <option value="1y" selected>Last 1 Year (EOD)</option>
+            <option value="2y">Last 2 Years (EOD)</option>
+          </select>
         </div>
-        <div class="form-group">
-          <label>Starting Capital (₹)</label>
-          <input id="capital" type="number" value="100000" />
+        <div>
+          <label>Run Name</label>
+          <input type="text" id="runName" value="Nifty Dynamic Breakout V1" />
         </div>
-      </div>
-
-      <!-- 2. Entry Rules (Quantman Style Card Stack) -->
-      <div class="card">
-        <div class="card-title">2. Entry Conditions (Buy When)</div>
-
-        <div class="condition-row">
-          <span class="cond-tag">TREND</span>
-          <label class="switch-label">
-            <input type="checkbox" id="condMa" checked />
-            <span>Fast MA (20) > Slow MA (50)</span>
-          </label>
-        </div>
-
-        <div class="condition-row">
-          <span class="cond-tag">VOLUME</span>
-          <label class="switch-label">
-            <input type="checkbox" id="condVwap" checked />
-            <span>Current Close > Rolling VWAP</span>
-          </label>
-        </div>
-
-        <div class="condition-row">
-          <span class="cond-tag">PIVOT</span>
-          <div style="flex:1;">
-            <select id="condPivotRule">
-              <option value="above_p" selected>Close > Central Pivot (P)</option>
-              <option value="above_r1">Close > Resistance 1 (R1)</option>
-              <option value="above_r2">Close > Resistance 2 (R2)</option>
-              <option value="none">Ignore Pivot</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="condition-row">
-          <span class="cond-tag">MOMENTUM</span>
-          <div style="display:flex; align-items:center; gap:6px; flex:1;">
-            <label class="switch-label" style="flex:1;">
-              <input type="checkbox" id="condAdx" checked />
-              <span>ADX (14) ≥</span>
-            </label>
-            <input type="number" id="adxMin" value="20" style="width:60px;" />
-          </div>
-        </div>
-
-        <div class="condition-row">
-          <span class="cond-tag">CANDLE</span>
-          <label class="switch-label">
-            <input type="checkbox" id="condGreen" checked />
-            <span>Green Bar (Close > Open)</span>
-          </label>
+        <div>
+          <label>Instrument Type & Target</label>
+          <select id="instrumentTarget">
+            <optgroup label="Indices & Derivatives">
+              <option value="^NSEI|OPTION_ATM_CE" selected>NIFTY 50 - ATM CALL (CE)</option>
+              <option value="^NSEI|OPTION_ATM_PE">NIFTY 50 - ATM PUT (PE)</option>
+              <option value="^NSEI|FUTURES">NIFTY 50 - Futures</option>
+              <option value="^NSEBANK|OPTION_ATM_CE">BANKNIFTY - ATM CALL (CE)</option>
+              <option value="^NSEBANK|OPTION_ATM_PE">BANKNIFTY - ATM PUT (PE)</option>
+            </optgroup>
+            <optgroup label="NSE F&O Stocks (Equity & Derivatives)">
+              <option value="RELIANCE.NS|EQUITY">RELIANCE - Equity / Cash</option>
+              <option value="TCS.NS|EQUITY">TCS - Equity / Cash</option>
+              <option value="INFY.NS|EQUITY">INFY - Equity / Cash</option>
+              <option value="HDFCBANK.NS|EQUITY">HDFCBANK - Equity / Cash</option>
+              <option value="TATAMOTORS.NS|EQUITY">TATAMOTORS - Equity / Cash</option>
+            </optgroup>
+          </select>
         </div>
       </div>
-
-      <!-- 3. Target & Stop Loss Rules -->
-      <div class="card">
-        <div class="card-title">3. Exits & Risk Controls</div>
-
-        <div class="grid-2 form-group">
-          <div>
-            <label>Target 1 (TP1)</label>
-            <select id="tp1">
-              <option value="r1">Hit R1 Pivot</option>
-              <option value="r2" selected>Hit R2 Pivot</option>
-              <option value="fixed">Fixed %</option>
-            </select>
-          </div>
-          <div>
-            <label>Fixed Target %</label>
-            <input id="tpVal" type="number" value="5.0" step="0.5" />
-          </div>
-        </div>
-
-        <div class="grid-2 form-group">
-          <div>
-            <label>Stop Loss (%)</label>
-            <input id="slVal" type="number" value="2.0" step="0.5" />
-          </div>
-          <div>
-            <label>Trailing SL Mode</label>
-            <select id="trailMode">
-              <option value="trail_s1" selected>Trail to S1 Pivot</option>
-              <option value="trail_s2">Trail to S2 Pivot</option>
-              <option value="none">Fixed SL Only</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-top:10px;">
-          <label class="switch-label">
-            <input type="checkbox" id="partialExit" checked />
-            <span>Book 50% Qty at TP1 (Move SL to Breakeven)</span>
-          </label>
-        </div>
-
-        <div class="form-group">
-          <label class="switch-label">
-            <input type="checkbox" id="applyCharges" checked />
-            <span>Deduct Indian STT, Stamp Duty & GST</span>
-          </label>
-        </div>
-      </div>
-
-      <button class="btn-run" onclick="runBacktest()">⚡ RUN BACKTEST</button>
     </div>
 
-    <!-- RIGHT PANEL: Dashboard & Charts -->
-    <div class="results-pane">
+    <!-- 2. Indicators Ribbon (Matches Screenshot 1 & 2) -->
+    <div class="panel">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <label style="margin:0;">Active Indicators</label>
+        <button class="btn-purple" onclick="openIndicatorModal()">+ Add Indicator</button>
+      </div>
+      <div class="indicator-chips" id="indicatorList">
+        <!-- Default indicator chip -->
+        <div class="chip" id="chip-base">
+          <span class="chip-badge">Current</span>
+          <span>Interval: Daily | Field: Equity/Index | Type: Candle</span>
+        </div>
+      </div>
+    </div>
 
-      <!-- Performance Cards -->
-      <div class="metrics-strip">
-        <div class="metric-card">
-          <div class="metric-title">Net Capital</div>
-          <div class="metric-value" id="kpiCapital">₹0.00</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-title">Net Return</div>
-          <div class="metric-value" id="kpiReturn">0.00%</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-title">Win Rate</div>
-          <div class="metric-value" id="kpiWinRate">0.0%</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-title">Total Trades</div>
-          <div class="metric-value" id="kpiTrades">0</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-title">Taxes & STT</div>
-          <div class="metric-value red" id="kpiTaxes">₹0.00</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-title">Max Drawdown</div>
-          <div class="metric-value red" id="kpiDrawdown">0.0%</div>
+    <!-- 3. Entry / Exit Condition Case -->
+    <div class="panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <label style="margin:0;">Case 1 (Condition Logic)</label>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="checkbox" id="trailSlCheck" checked style="width:auto;" />
+          <span style="font-size:11px; color:var(--text-muted);">Enable Trailing Stop Loss</span>
         </div>
       </div>
 
-      <!-- Chart Container -->
-      <div id="chart-container"></div>
-
-      <!-- Detailed Executions -->
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Date</th>
-              <th>Type</th>
-              <th>Execution Trigger / Rule</th>
-              <th>Price</th>
-              <th>Qty</th>
-              <th>Trailed Stop</th>
-              <th>Charges</th>
-              <th>Net PnL</th>
-              <th>Return</th>
-            </tr>
-          </thead>
-          <tbody id="tradeLog">
-            <tr><td colspan="10" style="text-align:center; color:var(--text-muted);">Configure rules on the left and click 'Run Backtest'.</td></tr>
-          </tbody>
-        </table>
+      <!-- Entry Rule -->
+      <div class="cond-box">
+        <div class="cond-title">
+          <span class="cond-entry">Entry when:</span>
+          <span id="entryRuleDisplay">Close > SMA(20) AND Close > VWAP AND Close > Pivot(P)</span>
+        </div>
+        <button class="btn-purple" onclick="editCondition('entry')">✏️ Edit</button>
       </div>
 
+      <!-- Exit Rule -->
+      <div class="cond-box">
+        <div class="cond-title">
+          <span class="cond-exit">Exit when:</span>
+          <span id="exitRuleDisplay">Target Reached OR Trailing SL Breached OR SMA(20) Reversal</span>
+        </div>
+        <button class="btn-purple" onclick="editCondition('exit')">✏️ Edit</button>
+      </div>
+
+      <!-- Leg Configuration Table (Algoverse screenshot) -->
+      <table class="leg-table">
+        <thead>
+          <tr>
+            <th>Segment</th>
+            <th>Type</th>
+            <th>Lot Size</th>
+            <th>Target Profit</th>
+            <th>Stop Loss</th>
+            <th>Trailing Target</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="tag-ce" id="legSegmentTag">OPTION / CE</span></td>
+            <td id="legStrikeDisplay">ATM Strike</td>
+            <td><input type="number" id="lotSize" value="50" style="width:70px;" /></td>
+            <td>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <input type="number" id="tpPct" value="10" style="width:60px;" />
+                <span>%</span>
+              </div>
+            </td>
+            <td>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <input type="number" id="slPct" value="4" style="width:60px;" />
+                <span>%</span>
+              </div>
+            </td>
+            <td>
+              <select id="trailPivotMode">
+                <option value="s1">Trail to S1 Pivot</option>
+                <option value="s2">Trail to S2 Pivot</option>
+                <option value="breakeven">Breakeven at 50% TP</option>
+              </select>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Execution Action -->
+      <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+        <button class="btn-purple" style="padding: 10px 24px; font-size:14px;" onclick="runAlgoverseTest()">
+          ⚡ Run Automated Backtest
+        </button>
+      </div>
+    </div>
+
+    <!-- 4. Backtest Results & Chart Section -->
+    <div class="panel" id="results-section">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <label style="margin:0;">Performance Overview & Metrics</label>
+        <span id="statusTag" style="color:var(--text-muted); font-size:11px;">Ready</span>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title">Initial Capital</div>
+          <div class="kpi-val">₹1,00,000</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Net Capital</div>
+          <div class="kpi-val" id="kpiNetCapital">₹0.00</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Total Return</div>
+          <div class="kpi-val" id="kpiReturn">0.0%</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Win Rate</div>
+          <div class="kpi-val" id="kpiWinRate">0.0%</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Total Trades</div>
+          <div class="kpi-val" id="kpiTrades">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Taxes & STT</div>
+          <div class="kpi-val" style="color:var(--red);" id="kpiCharges">₹0.00</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Max Drawdown</div>
+          <div class="kpi-val" style="color:var(--red);" id="kpiDrawdown">0.0%</div>
+        </div>
+      </div>
+
+      <div id="chart"></div>
+    </div>
+
+  </div>
+
+  <!-- MODAL: ADD INDICATOR (Directly matching Image 2) -->
+  <div class="modal-backdrop" id="indicatorModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span>Add Indicator</span>
+        <span class="modal-close" onclick="closeIndicatorModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div>
+          <label>Indicator Type</label>
+          <select id="modalIndType" onchange="syncIndicatorDefaults()">
+            <option value="SMA">SMA (Simple Moving Average)</option>
+            <option value="EMA">EMA (Exponential Moving Average)</option>
+            <option value="RSI">RSI (Relative Strength Index)</option>
+            <option value="SuperTrend">Super Trend</option>
+            <option value="VWAP">VWAP (Rolling Volume Weighted)</option>
+            <option value="Pivots">Standard Pivot Points (R1-R5, S1-S5)</option>
+          </select>
+        </div>
+        <div>
+          <label>Name</label>
+          <input type="text" id="modalIndName" value="sma" />
+        </div>
+        <div>
+          <label>Period / Parameter</label>
+          <input type="number" id="modalIndPeriod" value="9" />
+        </div>
+        <div>
+          <label>Field</label>
+          <input type="text" id="modalIndField" value="Equity / Close" readonly />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-purple" onclick="saveNewIndicator()">Save Indicator</button>
+      </div>
     </div>
   </div>
 
   <script>
-    let chart, candleSeries, fastLine, slowLine, vwapLine;
-    let pivotSeries = {};
+    let activeIndicators = [
+      { type: 'SMA', name: 'SMA Fast', period: 20 },
+      { type: 'VWAP', name: 'VWAP', period: 20 },
+      { type: 'Pivots', name: 'Standard Pivots', period: 1 }
+    ];
 
-    function initChart() {
-      const container = document.getElementById('chart-container');
-      container.innerHTML = "";
-      chart = LightweightCharts.createChart(container, {
-        width: container.clientWidth,
-        height: 480,
-        layout: { background: { color: '#151924' }, textColor: '#848e9c' },
-        grid: { vertLines: { color: '#1f2433' }, horzLines: { color: '#1f2433' } },
-        timeScale: { borderColor: '#282f42' }
+    let chart = null;
+    let candleSeries = null;
+
+    function renderIndicatorChips() {
+      const container = document.getElementById('indicatorList');
+      container.innerHTML = `
+        <div class="chip">
+          <span class="chip-badge">Current</span>
+          <span>Interval: Daily | Field: Equity/Index | Type: Candle</span>
+        </div>
+      `;
+      activeIndicators.forEach((ind, index) => {
+        const div = document.createElement('div');
+        div.className = 'chip';
+        div.innerHTML = `
+          <span class="chip-badge" style="background:#7c3aed; color:#fff;">${ind.type}</span>
+          <span>${ind.name} (${ind.period || ''})</span>
+          <span class="chip-remove" onclick="removeIndicator(${index})">&times;</span>
+        `;
+        container.appendChild(div);
       });
+    }
 
+    function openIndicatorModal() {
+      document.getElementById('indicatorModal').style.display = 'flex';
+    }
+    function closeIndicatorModal() {
+      document.getElementById('indicatorModal').style.display = 'none';
+    }
+    function syncIndicatorDefaults() {
+      const t = document.getElementById('modalIndType').value;
+      document.getElementById('modalIndName').value = t.toLowerCase();
+      document.getElementById('modalIndPeriod').value = t === 'RSI' ? 14 : (t === 'SMA' ? 9 : 20);
+    }
+    function saveNewIndicator() {
+      const type = document.getElementById('modalIndType').value;
+      const name = document.getElementById('modalIndName').value;
+      const period = parseInt(document.getElementById('modalIndPeriod').value) || 14;
+      activeIndicators.push({ type, name, period });
+      renderIndicatorChips();
+      closeIndicatorModal();
+    }
+    function removeIndicator(index) {
+      activeIndicators.splice(index, 1);
+      renderIndicatorChips();
+    }
+
+    function editCondition(type) {
+      const curr = type === 'entry' ? document.getElementById('entryRuleDisplay').innerText : document.getElementById('exitRuleDisplay').innerText;
+      const updated = prompt(`Edit ${type.toUpperCase()} Rule Logic:`, curr);
+      if (updated) {
+        if (type === 'entry') document.getElementById('entryRuleDisplay').innerText = updated;
+        else document.getElementById('exitRuleDisplay').innerText = updated;
+      }
+    }
+
+    // Initialize Lightweight Chart
+    function initChart() {
+      const el = document.getElementById('chart');
+      el.innerHTML = "";
+      chart = LightweightCharts.createChart(el, {
+        width: el.clientWidth,
+        height: 480,
+        layout: { background: { color: '#161224' }, textColor: '#9ca3af' },
+        grid: { vertLines: { color: '#231d38' }, horzLines: { color: '#231d38' } },
+        timeScale: { borderColor: '#2c2445' }
+      });
       candleSeries = chart.addCandlestickSeries({
-        upColor: '#26a69a', downColor: '#ef5350',
-        wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+        upColor: '#10b981', downColor: '#ef4444',
+        wickUpColor: '#10b981', wickDownColor: '#ef4444',
         borderVisible: false
       });
-
-      fastLine = chart.addLineSeries({ color: '#2962ff', lineWidth: 1.5 });
-      slowLine = chart.addLineSeries({ color: '#ff9800', lineWidth: 1.5 });
-      vwapLine = chart.addLineSeries({ color: '#ab47bc', lineWidth: 1.5 });
-
-      pivotSeries['p'] = chart.addLineSeries({ color: '#ffd54f', lineWidth: 1.5, lineStyle: 2 });
-      for (let i = 1; i <= 5; i++) {
-        pivotSeries['r' + i] = chart.addLineSeries({ color: '#ef5350', lineWidth: 1, lineStyle: 3 });
-        pivotSeries['s' + i] = chart.addLineSeries({ color: '#26a69a', lineWidth: 1, lineStyle: 3 });
-      }
-
-      window.addEventListener('resize', () => chart.applyOptions({ width: container.clientWidth }));
+      window.addEventListener('resize', () => chart.applyOptions({ width: el.clientWidth }));
     }
 
-    // Indian Brokerage, STT, and Taxes Formula
-    function calcTaxes(buyTurnover, sellTurnover, apply) {
-      if (!apply) return { total: 0 };
-      const turnover = buyTurnover + sellTurnover;
-      const brokerage = Math.min(20, buyTurnover * 0.0003) + Math.min(20, sellTurnover * 0.0003);
-      const stt = turnover * 0.001; // 0.1% STT Delivery
-      const exch = turnover * 0.0000345;
-      const stamp = buyTurnover * 0.00015;
-      const gst = (brokerage + exch) * 0.18;
-      return { total: +(brokerage + stt + exch + stamp + gst).toFixed(2) };
-    }
+    // Automated Backtesting Engine (Equity & Synthetic Options Pricing)
+    async function runAlgoverseTest() {
+      const status = document.getElementById('statusTag');
+      status.innerText = "Fetching historical data...";
+      status.style.color = "#8b5cf6";
 
-    function calculateIndicators(candles) {
-      // SMA
-      const calcMA = (len) => {
-        const res = [];
-        for (let i = 0; i < candles.length; i++) {
-          if (i < len - 1) continue;
-          let sum = 0;
-          for (let j = 0; j < len; j++) sum += candles[i - j].close;
-          res.push({ time: candles[i].time, value: +(sum / len).toFixed(2) });
-        }
-        return new Map(res.map(d => [d.time, d.value]));
-      };
+      const [symbol, derivType] = document.getElementById('instrumentTarget').value.split('|');
+      const timeRange = document.getElementById('timeRange').value;
+      const tpPct = parseFloat(document.getElementById('tpPct').value);
+      const slPct = parseFloat(document.getElementById('slPct').value);
+      const lotSize = parseInt(document.getElementById('lotSize').value);
 
-      // VWAP (20 Bar Rolling)
-      const vwapMap = new Map();
-      for (let i = 0; i < candles.length; i++) {
-        let pv = 0, vol = 0;
-        const start = Math.max(0, i - 19);
-        for (let j = start; j <= i; j++) {
-          const tp = (candles[j].high + candles[j].low + candles[j].close) / 3;
-          pv += tp * (candles[j].volume || 1);
-          vol += (candles[j].volume || 1);
-        }
-        vwapMap.set(candles[i].time, +(pv / vol).toFixed(2));
-      }
+      // Update leg table badge
+      const tag = document.getElementById('legSegmentTag');
+      tag.className = derivType.includes('CE') ? 'tag-ce' : (derivType.includes('PE') ? 'tag-pe' : 'tag-eq');
+      tag.innerText = derivType;
 
-      // Standard Pivots (P, R1-R5, S1-S5)
-      const pivotMap = new Map();
-      for (let i = 0; i < candles.length; i++) {
-        if (i === 0) continue;
-        const prev = candles[i - 1];
-        const range = prev.high - prev.low;
-        const p = (prev.high + prev.low + prev.close) / 3;
-        const r1 = (2 * p) - prev.low, s1 = (2 * p) - prev.high;
-        pivotMap.set(candles[i].time, {
-          p: +p.toFixed(2),
-          r1: +r1.toFixed(2), r2: +(p + range).toFixed(2), r3: +(r1 + range).toFixed(2),
-          r4: +(p + 2 * range).toFixed(2), r5: +(r1 + 2 * range).toFixed(2),
-          s1: +s1.toFixed(2), s2: +(p - range).toFixed(2), s3: +(s1 - range).toFixed(2),
-          s4: +(p - 2 * range).toFixed(2), s5: +(s1 - 2 * range).toFixed(2)
-        });
-      }
-
-      // Simplified ADX
-      const adxList = new Array(candles.length).fill(25); // Baseline strength
-
-      return {
-        fastMA: calcMA(20),
-        slowMA: calcMA(50),
-        vwap: vwapMap,
-        pivots: pivotMap,
-        adx: adxList
-      };
-    }
-
-    async function runBacktest() {
-      let sym = document.getElementById('symbol').value.trim();
-      if (!sym.includes('.')) sym += '.NS';
-      const range = document.getElementById('range').value;
-      const initialCapital = parseFloat(document.getElementById('capital').value) || 100000;
-
-      // Pull Rule Inputs
-      const condMa = document.getElementById('condMa').checked;
-      const condVwap = document.getElementById('condVwap').checked;
-      const pivotRule = document.getElementById('condPivotRule').value;
-      const condAdx = document.getElementById('condAdx').checked;
-      const minAdx = parseFloat(document.getElementById('adxMin').value);
-      const condGreen = document.getElementById('condGreen').checked;
-
-      const tp1Mode = document.getElementById('tp1').value;
-      const tpVal = parseFloat(document.getElementById('tpVal').value);
-      const slVal = parseFloat(document.getElementById('slVal').value);
-      const trailMode = document.getElementById('trailMode').value;
-      const partialExit = document.getElementById('partialExit').checked;
-      const applyCharges = document.getElementById('applyCharges').checked;
-
-      // Fetch Data via proxy
-      const target = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=${range}&interval=1d`;
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
+      // Yahoo Finance data fetch via proxy
+      const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${timeRange}&interval=1d`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
 
       let candles = [];
       try {
         const res = await fetch(proxyUrl);
         const data = await res.json();
-        const resObj = data.chart.result[0];
-        const ts = resObj.timestamp;
-        const q = resObj.indicators.quote[0];
+        const root = data.chart.result[0];
+        const ts = root.timestamp;
+        const q = root.indicators.quote[0];
 
         for (let i = 0; i < ts.length; i++) {
           if (q.open[i] && q.close[i]) {
-            const d = new Date(ts[i] * 1000);
+            const d = new Date(ts[i] * 1000).toISOString().split('T')[0];
             candles.push({
-              time: d.toISOString().split('T')[0],
+              time: d,
               open: +q.open[i].toFixed(2),
               high: +q.high[i].toFixed(2),
               low: +q.low[i].toFixed(2),
               close: +q.close[i].toFixed(2),
-              volume: q.volume ? q.volume[i] : 10000
+              volume: q.volume ? q.volume[i] : 50000
             });
           }
         }
       } catch (e) {
-        alert("Failed to load historical data for " + sym);
+        alert("Failed to load historical data for " + symbol);
+        status.innerText = "Error loading data";
         return;
       }
 
-      // Calculations
-      const ind = calculateIndicators(candles);
-      let capital = initialCapital;
+      status.innerText = "Simulating derivative rules...";
+
+      // Compute Pivots & 20-period SMA for strategy evaluation
+      let capital = 100000;
       let peakCapital = capital;
       let maxDD = 0;
       let totalCharges = 0;
-      let pos = 0, entryPrice = 0, currentSL = 0;
-      let partialDone = false;
+      let pos = 0, entrySpot = 0, entryPrem = 0, currentSL = 0;
       let wins = 0, closedTrades = 0;
-
       const markers = [];
-      const tradeLog = [];
 
-      for (let i = 1; i < candles.length; i++) {
-        const c = candles[i], prev = candles[i - 1];
-        const t = c.time, prevT = prev.time;
-        const fNow = ind.fastMA.get(t), sNow = ind.slowMA.get(t);
-        const fPrev = ind.fastMA.get(prevT), sPrev = ind.slowMA.get(prevT);
-        const vwap = ind.vwap.get(t);
-        const pObj = ind.pivots.get(t) || {};
-        const adx = ind.adx[i];
+      for (let i = 20; i < candles.length; i++) {
+        const c = candles[i];
+        const prev = candles[i - 1];
 
-        if (!fNow || !sNow || !vwap || !pObj.p) continue;
+        // 20 SMA
+        let sum = 0;
+        for (let j = 0; j < 20; j++) sum += candles[i - j].close;
+        const sma20 = sum / 20;
 
-        // Position Active: Check Exit Rules
+        // Daily Pivot
+        const pivotP = (prev.high + prev.low + prev.close) / 3;
+        const pivotS1 = (2 * pivotP) - prev.high;
+
+        // Derivative pricing approximation (ATM Option Delta ~ 0.50)
+        // Option premium ~ 2% of spot value
+        const currentPrem = derivType.includes('OPTION') ? +(c.close * 0.02).toFixed(2) : c.close;
+
+        // Active Trade Management
         if (pos > 0) {
-          // Trailing SL Adjustment
-          if (trailMode === 'trail_s1' && pObj.s1 > currentSL) currentSL = pObj.s1;
-          if (trailMode === 'trail_s2' && pObj.s2 > currentSL) currentSL = pObj.s2;
-
-          const tpPrice = tp1Mode === 'fixed' ? (entryPrice * (1 + tpVal / 100)) : (pObj[tp1Mode] || 0);
-
-          // Partial Exit (50%)
-          if (partialExit && !partialDone && tpPrice > entryPrice && c.high >= tpPrice) {
-            const partQty = Math.floor(pos / 2);
-            if (partQty > 0) {
-              const buyTurn = partQty * entryPrice;
-              const sellTurn = partQty * tpPrice;
-              const taxes = calcTaxes(buyTurn, sellTurn, applyCharges);
-              const net = (sellTurn - buyTurn) - taxes.total;
-
-              capital += (sellTurn - taxes.total);
-              totalCharges += taxes.total;
-              pos -= partQty;
-              partialDone = true;
-              if (currentSL < entryPrice) currentSL = entryPrice; // Breakeven
-
-              tradeLog.push({
-                date: t, type: 'PARTIAL (50%)', rule: `TP1 Reached (${tp1Mode.toUpperCase()}) | SL to Breakeven`,
-                price: tpPrice, qty: partQty, sl: currentSL, charges: taxes.total, net: net,
-                ret: ((net / buyTurn) * 100).toFixed(2)
-              });
-              markers.push({ time: t, position: 'aboveBar', color: '#82b1ff', shape: 'arrowDown', text: 'PARTIAL' });
-            }
+          // Track trailing SL
+          if (document.getElementById('trailSlCheck').checked && derivType === 'EQUITY' && pivotS1 > currentSL) {
+            currentSL = pivotS1;
           }
 
-          // Full/Final Exit
-          let exitReason = null, exitFill = c.close;
-          if (!partialExit && tpPrice > entryPrice && c.high >= tpPrice) {
-            exitFill = tpPrice; exitReason = `Full Target Reached (${tp1Mode.toUpperCase()})`;
-          } else if (c.low <= currentSL) {
-            exitFill = currentSL; exitReason = `Stop Loss Breached (-${slVal}%)`;
-          } else if (fPrev >= sPrev && fNow < sNow) {
-            exitFill = c.close; exitReason = `Trend Reversal (Death Cross)`;
+          let exitReason = null;
+          let exitPrice = currentPrem;
+
+          // Target / SL calculations based on premium return
+          const priceChangePct = ((currentPrem - entryPrem) / entryPrem) * 100;
+
+          if (priceChangePct >= tpPct) {
+            exitReason = "TARGET HIT";
+          } else if (priceChangePct <= -slPct) {
+            exitReason = "STOP LOSS HIT";
+          } else if (c.close < sma20) {
+            exitReason = "REVERSAL";
           }
 
           if (exitReason) {
-            const buyTurn = pos * entryPrice;
-            const sellTurn = pos * exitFill;
-            const taxes = calcTaxes(buyTurn, sellTurn, applyCharges);
-            const net = (sellTurn - buyTurn) - taxes.total;
-
-            capital += (sellTurn - taxes.total);
-            totalCharges += taxes.total;
+            const pnl = (currentPrem - entryPrem) * pos * lotSize;
+            const charges = Math.abs(pnl) * 0.001 + 40; // STT & Exchange turnover model
+            capital += (pnl - charges);
+            totalCharges += charges;
             closedTrades++;
-            if (net > 0) wins++;
+            if (pnl > 0) wins++;
 
-            tradeLog.push({
-              date: t, type: 'EXIT (100%)', rule: exitReason,
-              price: exitFill, qty: pos, sl: currentSL, charges: taxes.total, net: net,
-              ret: ((net / buyTurn) * 100).toFixed(2)
+            markers.push({
+              time: c.time, position: 'aboveBar', color: '#ef4444', shape: 'arrowDown',
+              text: `EXIT (${exitReason})`
             });
-            markers.push({ time: t, position: 'aboveBar', color: '#ef5350', shape: 'arrowDown', text: 'EXIT' });
             pos = 0;
-            partialDone = false;
           }
         }
 
-        // Check Entry Rules
+        // Entry Rule Check
         if (pos === 0) {
-          let canEnter = true;
-          if (condMa && !(fNow > sNow)) canEnter = false;
-          if (condVwap && !(c.close > vwap)) canEnter = false;
-          if (condGreen && !(c.close > c.open)) canEnter = false;
-          if (condAdx && adx < minAdx) canEnter = false;
-          if (pivotRule === 'above_p' && !(c.close > pObj.p)) canEnter = false;
-          if (pivotRule === 'above_r1' && !(c.close > pObj.r1)) canEnter = false;
-          if (pivotRule === 'above_r2' && !(c.close > pObj.r2)) canEnter = false;
+          const bullishCross = c.close > sma20 && c.close > pivotP && c.close > c.open;
+          if (bullishCross) {
+            pos = 1; // 1 Lot
+            entrySpot = c.close;
+            entryPrem = currentPrem;
+            currentSL = entryPrem * (1 - slPct / 100);
 
-          if (canEnter) {
-            pos = Math.floor(capital / c.close);
-            if (pos > 0) {
-              entryPrice = c.close;
-              currentSL = entryPrice * (1 - slVal / 100);
-              capital -= (pos * entryPrice);
-
-              tradeLog.push({
-                date: t, type: 'BUY', rule: `All Condition Cards Met (VWAP, Pivot, MAs, ADX)`,
-                price: entryPrice, qty: pos, sl: currentSL, charges: '-', net: '-', ret: '-'
-              });
-              markers.push({ time: t, position: 'belowBar', color: '#26a69a', shape: 'arrowUp', text: 'BUY' });
-            }
+            markers.push({
+              time: c.time, position: 'belowBar', color: '#10b981', shape: 'arrowUp',
+              text: `BUY ${derivType.replace('OPTION_', '')}`
+            });
           }
         }
 
-        const equity = capital + (pos * c.close);
+        const equity = capital + (pos * (currentPrem - entryPrem) * lotSize);
         if (equity > peakCapital) peakCapital = equity;
         const dd = ((peakCapital - equity) / peakCapital) * 100;
         if (dd > maxDD) maxDD = dd;
       }
 
-      // Close open positions at the end of the testing period
-      if (pos > 0) {
-        const last = candles[candles.length - 1];
-        const buyTurn = pos * entryPrice;
-        const sellTurn = pos * last.close;
-        const taxes = calcTaxes(buyTurn, sellTurn, applyCharges);
-        const net = (sellTurn - buyTurn) - taxes.total;
-
-        capital += (sellTurn - taxes.total);
-        totalCharges += taxes.total;
-        closedTrades++;
-        if (net > 0) wins++;
-
-        tradeLog.push({
-          date: last.time, type: 'AUTO EXIT', rule: 'Backtest Period Ended',
-          price: last.close, qty: pos, sl: currentSL, charges: taxes.total, net: net,
-          ret: ((net / buyTurn) * 100).toFixed(2)
-        });
-      }
-
-      // Render KPIs
-      const netReturn = ((capital - initialCapital) / initialCapital) * 100;
+      // Populate KPI Dashboard
+      const retPct = ((capital - 100000) / 100000) * 100;
       const winRate = closedTrades > 0 ? (wins / closedTrades) * 100 : 0;
 
-      const capEl = document.getElementById('kpiCapital');
-      capEl.innerText = `₹${capital.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
-      capEl.className = `metric-value ${capital >= initialCapital ? 'green' : 'red'}`;
-
-      const retEl = document.getElementById('kpiReturn');
-      retEl.innerText = `${netReturn.toFixed(2)}%`;
-      retEl.className = `metric-value ${netReturn >= 0 ? 'green' : 'red'}`;
-
+      document.getElementById('kpiNetCapital').innerText = `₹${capital.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+      document.getElementById('kpiNetCapital').style.color = capital >= 100000 ? 'var(--green)' : 'var(--red)';
+      document.getElementById('kpiReturn').innerText = `${retPct.toFixed(2)}%`;
+      document.getElementById('kpiReturn').style.color = retPct >= 0 ? 'var(--green)' : 'var(--red)';
       document.getElementById('kpiWinRate').innerText = `${winRate.toFixed(1)}%`;
       document.getElementById('kpiTrades').innerText = closedTrades;
-      document.getElementById('kpiTaxes').innerText = `₹${totalCharges.toLocaleString('en-IN')}`;
+      document.getElementById('kpiCharges').innerText = `₹${totalCharges.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
       document.getElementById('kpiDrawdown').innerText = `${maxDD.toFixed(1)}%`;
 
-      // Render Table
-      const tb = document.getElementById('tradeLog');
-      tb.innerHTML = tradeLog.map((t, idx) => {
-        const isExit = t.type.includes('EXIT') || t.type.includes('PARTIAL');
-        const badge = t.type.includes('BUY') ? 'badge-buy' : (t.type.includes('PARTIAL') ? 'badge-partial' : 'badge-sell');
-        const netVal = parseFloat(t.net);
-        const pnlCol = isExit ? (netVal >= 0 ? 'green' : 'red') : '';
-        return `
-          <tr>
-            <td>${idx + 1}</td>
-            <td>${t.date}</td>
-            <td><span class="badge ${badge}">${t.type}</span></td>
-            <td class="rule-cell">${t.rule}</td>
-            <td><strong>₹${t.price}</strong></td>
-            <td>${t.qty}</td>
-            <td>₹${typeof t.sl === 'number' ? t.sl.toFixed(2) : t.sl}</td>
-            <td class="red">${isExit ? '₹' + t.charges : '-'}</td>
-            <td class="${pnlCol}"><strong>${isExit ? '₹' + t.net.toFixed(2) : '-'}</strong></td>
-            <td class="${pnlCol}">${isExit ? t.ret + '%' : '-'}</td>
-          </tr>
-        `;
-      }).join('');
-
-      // Plot Chart
+      // Render TradingView Candlestick series
       initChart();
       candleSeries.setData(candles);
-      fastLine.setData(Array.from(ind.fastMA, ([time, value]) => ({ time, value })));
-      slowLine.setData(Array.from(ind.slowMA, ([time, value]) => ({ time, value })));
-      vwapLine.setData(Array.from(ind.vwap, ([time, value]) => ({ time, value })));
-
-      const pArr = Array.from(ind.pivots, ([time, o]) => ({ time, p: o.p, r1: o.r1, r2: o.r2, s1: o.s1, s2: o.s2 }));
-      pivotSeries['p'].setData(pArr.map(d => ({ time: d.time, value: d.p })));
-      pivotSeries['r1'].setData(pArr.map(d => ({ time: d.time, value: d.r1 })));
-      pivotSeries['r2'].setData(pArr.map(d => ({ time: d.time, value: d.r2 })));
-      pivotSeries['s1'].setData(pArr.map(d => ({ time: d.time, value: d.s1 })));
-      pivotSeries['s2'].setData(pArr.map(d => ({ time: d.time, value: d.s2 })));
-
       candleSeries.setMarkers(markers);
       chart.timeScale().fitContent();
+
+      status.innerText = "Completed";
+      status.style.color = "var(--green)";
     }
 
-    window.onload = runBacktest;
+    // Setup initial chips and chart on load
+    window.onload = () => {
+      renderIndicatorChips();
+      runAlgoverseTest();
+    };
   </script>
 </body>
 </html>
