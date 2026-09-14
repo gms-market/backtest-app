@@ -1,1103 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AlgoVerse - Quantitative Strategy Studio</title>
-  <!-- TradingView Lightweight Charts Library -->
-  <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
-  <style>
-    :root {
-      --bg-body: #0c0817;
-      --bg-panel: #150e26;
-      --bg-card: #1d1336;
-      --bg-input: #10091e;
-      --border: #2c1e4d;
-      --border-focus: #7c3aed;
-      --primary: #7c3aed;
-      --primary-hover: #6d28d9;
-      --accent: #8b5cf6;
-      --green: #10b981;
-      --red: #ef4444;
-      --yellow: #f59e0b;
-      --text: #f3f4f6;
-      --text-muted: #9b8ebb;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg-body);
-      color: var(--text);
-      padding: 14px;
-      font-size: 13px;
-    }
-
-    /* Password Lock Screen Overlay */
-    #auth-overlay {
-      position: fixed;
-      inset: 0;
-      background: #090511;
-      z-index: 999999;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .auth-box {
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 34px;
-      width: 380px;
-      max-width: 90%;
-      text-align: center;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-    }
-    .auth-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
-    .auth-title span { color: var(--primary); }
-
-    /* Navigation Bar */
-    .nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 18px;
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      margin-bottom: 12px;
-    }
-    .brand { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px; cursor: pointer; }
-    .brand span { color: var(--primary); }
-    .nav-links { display: flex; gap: 6px; align-items: center; }
-    .nav-btn {
-      background: transparent;
-      color: var(--text-muted);
-      border: none;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-weight: 600;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .nav-btn.active { background: var(--primary); color: #fff; }
-    .nav-btn:hover:not(.active) { color: #fff; }
-    .pricing-btn {
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid #10b981;
-      color: #10b981;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    /* Sub Tabs (Backtest / Create) */
-    .sub-tabs {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 12px;
-    }
-    .sub-tab-box {
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 3px;
-      display: inline-flex;
-    }
-    .sub-tab-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 5px 18px;
-      border-radius: 16px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    .sub-tab-btn.active { background: var(--primary); color: #fff; }
-
-    /* Layout & Panels */
-    .container { max-width: 1440px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-    .panel {
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-    }
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .panel-title { font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; }
-
-    /* Inputs & Form Elements */
-    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-    label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
-    input, select {
-      width: 100%;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      color: #fff;
-      padding: 8px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      outline: none;
-    }
-    input:focus, select:focus { border-color: var(--border-focus); }
-    input[type="checkbox"] { width: auto; cursor: pointer; accent-color: var(--primary); }
-
-    /* Buttons */
-    .btn-purple {
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      padding: 7px 14px;
-      border-radius: 6px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 12px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .btn-purple:hover { background: var(--primary-hover); }
-    .btn-sm { padding: 4px 10px; font-size: 11px; }
-
-    /* Indicators Rows & Tag Pills */
-    .indicator-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px 12px;
-      margin-bottom: 8px;
-    }
-    .tag-pill {
-      background: #23163e;
-      border: 1px solid #3c266d;
-      color: #e2d9f7;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .tag-pill strong { color: #fff; }
-
-    /* Condition Containers */
-    .cond-box {
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 8px;
-    }
-    .cond-content { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .cond-tag { font-weight: 700; font-size: 12px; }
-    .cond-tag.entry { color: var(--green); }
-    .cond-tag.exit { color: var(--red); }
-    .rule-chip {
-      background: #241740;
-      border: 1px solid #432b78;
-      padding: 4px 9px;
-      border-radius: 4px;
-      font-size: 11px;
-      color: #e5def5;
-    }
-
-    /* Leg Matrix Table */
-    .leg-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 12px;
-      background: var(--bg-input);
-      border-radius: 6px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-    .leg-table th, .leg-table td { padding: 8px 12px; text-align: left; }
-    .leg-table th { background: #1c1433; color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
-    .tag-buy { background: rgba(16, 185, 129, 0.2); color: var(--green); padding: 3px 8px; border-radius: 4px; font-weight: 700; }
-    .tag-sell { background: rgba(239, 68, 68, 0.2); color: var(--red); padding: 3px 8px; border-radius: 4px; font-weight: 700; }
-
-    /* Modals */
-    .modal-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.85);
-      z-index: 100000;
-      justify-content: center;
-      align-items: center;
-    }
-    .modal {
-      background: #181229;
-      border: 1px solid #3d2c5e;
-      border-radius: 10px;
-      width: 680px;
-      max-width: 95%;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-    }
-    .modal-header {
-      background: var(--primary);
-      padding: 12px 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      color: #fff;
-      font-weight: 700;
-    }
-    .modal-close { cursor: pointer; font-size: 20px; line-height: 1; }
-    .modal-body { padding: 18px; max-height: 70vh; overflow-y: auto; }
-    .modal-footer {
-      padding: 12px 18px;
-      background: #120d20;
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      border-top: 1px solid var(--border);
-    }
-
-    /* Chart Type Button Group */
-    .btn-group { display: flex; gap: 6px; }
-    .btn-group button {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: 600;
-    }
-    .btn-group button.active {
-      background: var(--primary);
-      border-color: var(--primary);
-      color: #fff;
-    }
-
-    /* Signal Builder Rows (Screen Recorder 03:30 - 04:30) */
-    .signal-row {
-      display: grid;
-      grid-template-columns: 1fr 130px 1fr 34px;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .logic-divider {
-      display: flex;
-      justify-content: center;
-      margin: 8px 0;
-    }
-    .btn-logic {
-      background: #271c42;
-      border: 1px solid var(--primary);
-      color: #fff;
-      padding: 2px 12px;
-      border-radius: 12px;
-      font-weight: 700;
-      font-size: 10px;
-      cursor: pointer;
-    }
-
-    /* KPI Dashboard */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 12px; }
-    .kpi-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
-    .kpi-title { font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
-    .kpi-val { font-size: 17px; font-weight: 800; margin-top: 4px; }
-    #chart { height: 480px; width: 100%; margin-top: 14px; border-radius: 6px; border: 1px solid var(--border); }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bartleby — Strategy Backtester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- Password Authentication Screen -->
-  <div id="auth-overlay">
-    <div class="auth-box">
-      <div class="auth-title">⚡ <span>algo</span>verse</div>
-      <p style="color:var(--text-muted); font-size:12px; margin-bottom:18px;">Strategy Studio • Enter Access Password</p>
-      <input type="password" id="sitePassword" placeholder="Enter Password" style="margin-bottom:14px; text-align:center;" onkeydown="if(event.key==='Enter') verifyPassword()" />
-      <button class="btn-purple" style="width:100%; justify-content:center;" onclick="verifyPassword()">Unlock Studio</button>
-      <p id="authError" style="color:var(--red); font-size:11px; margin-top:10px; display:none;">Incorrect Password. Access Denied.</p>
+<div class="app">
+
+  <!-- ===== Top bar ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">◆</span>
+      <span class="brand-name">Bartleby</span>
+      <span class="brand-sub">strategy backtester</span>
     </div>
-  </div>
-
-  <!-- Top Navbar -->
-  <div class="nav">
-    <div class="brand">⚡ <span>algo</span>verse</div>
-    <div class="nav-links">
-      <button class="nav-btn">Algo Strategies</button>
-      <button class="nav-btn active">Create Strategies</button>
-      <button class="nav-btn" onclick="document.getElementById('chart-panel').scrollIntoView({behavior:'smooth'})">Backtest</button>
-      <button class="nav-btn">My Strategies</button>
-      <button class="nav-btn">Dashboard</button>
-      <span class="pricing-btn">Pricing</span>
+    <div class="topbar-actions">
+      <span id="dataStatus" class="data-status">No data loaded</span>
+      <button id="runBtn" class="btn btn-accent" disabled>Run backtest</button>
     </div>
-  </div>
+  </header>
 
-  <!-- Sub Tabs (Backtest / Create) -->
-  <div class="sub-tabs">
-    <div class="sub-tab-box">
-      <button class="sub-tab-btn active">Backtest</button>
-      <button class="sub-tab-btn">Create</button>
-    </div>
-  </div>
+  <div class="body">
 
-  <div class="container">
+    <!-- ===== Left rail: strategy construction ===== -->
+    <aside class="rail">
 
-    <!-- 1. Strategy Top Bar -->
-    <div class="panel">
-      <div class="grid-3">
-        <div>
-          <label>Backtest Duration</label>
-          <select id="duration">
-            <option value="6mo">01-Mar-2024 To Current (6 months)</option>
-            <option value="1y" selected>01-Sep-2023 To Current (1 year)</option>
-            <option value="2y">01-Sep-2022 To Current (2 years)</option>
-          </select>
-        </div>
-        <div>
-          <label>Run Name</label>
-          <input type="text" id="runName" value="Test-1" />
-        </div>
-        <div>
-          <label>Folder Name</label>
-          <select id="folderName">
-            <option value="Default" selected>Default</option>
-            <option value="CE">CE</option>
-            <option value="PE">PE</option>
-          </select>
-        </div>
-      </div>
-      <div class="grid-3" style="margin-top:12px;">
-        <div>
-          <label>Segment</label>
-          <select id="segmentType">
-            <option value="equity_index" selected>Equity & Index</option>
-            <option value="futures">Futures</option>
-          </select>
-        </div>
-        <div>
-          <label>Instrument</label>
-          <select id="instrument">
-            <optgroup label="Index">
-              <option value="NIFTY" selected>NIFTY</option>
-              <option value="BANKNIFTY">BANKNIFTY</option>
-              <option value="FINNIFTY">FINNIFTY</option>
-              <option value="MIDCPNIFTY">MIDCPNIFTY</option>
-              <option value="SENSEX">SENSEX</option>
-            </optgroup>
-            <optgroup label="Equities">
-              <option value="RELIANCE.NS">RELIANCE</option>
-              <option value="TCS.NS">TCS</option>
-              <option value="HDFCBANK.NS">HDFCBANK</option>
-              <option value="INFY.NS">INFY</option>
-              <option value="TATAMOTORS.NS">TATAMOTORS</option>
-            </optgroup>
-          </select>
-        </div>
-        <div style="display:flex; align-items:flex-end;">
-          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin-bottom:10px;">
-            <input type="checkbox" id="advCheck" /> Advanced
+      <section class="rail-section">
+        <h2 class="rail-title">01 — Data</h2>
+        <label class="dropzone" id="dropzone" for="csvInput">
+          <input type="file" id="csvInput" accept=".csv" hidden>
+          <span id="dropzoneLabel">Drop CSV or click to upload</span>
+          <span class="dropzone-hint">date, open, high, low, close, volume</span>
+        </label>
+        <div id="dataSummary" class="data-summary hidden"></div>
+      </section>
+
+      <section class="rail-section">
+        <h2 class="rail-title">02 — Indicators</h2>
+        <div id="indicatorList" class="indicator-list"></div>
+        <button id="addIndicatorBtn" class="btn btn-ghost btn-block">+ Add indicator</button>
+      </section>
+
+      <section class="rail-section">
+        <h2 class="rail-title">03 — Entry rule</h2>
+        <div id="entryConditions" class="condition-list" data-group="entry"></div>
+        <button class="btn btn-ghost btn-block add-condition-btn" data-group="entry">+ Add condition</button>
+      </section>
+
+      <section class="rail-section">
+        <h2 class="rail-title">04 — Exit rule</h2>
+        <div id="exitConditions" class="condition-list" data-group="exit"></div>
+        <button class="btn btn-ghost btn-block add-condition-btn" data-group="exit">+ Add condition</button>
+      </section>
+
+      <section class="rail-section">
+        <h2 class="rail-title">05 — Position &amp; risk</h2>
+        <div class="field-grid">
+          <label class="field">
+            <span>Direction</span>
+            <select id="direction">
+              <option value="long">Long only</option>
+              <option value="short">Short only</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Quantity</span>
+            <input type="number" id="quantity" value="1" min="1">
+          </label>
+          <label class="field">
+            <span>Initial capital</span>
+            <input type="number" id="initialCapital" value="100000" min="0" step="1000">
+          </label>
+          <label class="field">
+            <span>Stop loss %</span>
+            <input type="number" id="stopLossPct" value="0" min="0" step="0.1">
+          </label>
+          <label class="field">
+            <span>Take profit %</span>
+            <input type="number" id="takeProfitPct" value="0" min="0" step="0.1">
           </label>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- 2. Indicators Ribbon (Screen Recorder 01:07 - 03:20) -->
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Indicators</span>
-        <button class="btn-purple" onclick="openIndicatorModal()">+ Add Indicator</button>
-      </div>
-      <div id="indicatorRowsContainer">
-        <!-- Full interactive indicator rows rendered here -->
-      </div>
-    </div>
+    </aside>
 
-    <!-- 3. Features Enablement Toggles -->
-    <div class="panel">
-      <div class="panel-title">Features Enablement:</div>
-      <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:8px;">
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-          <input type="checkbox" id="featTrailing" checked /> Trailing Stop-loss
-        </label>
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-          <input type="checkbox" id="featReEntry" checked /> Re-Entry
-        </label>
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-          <input type="checkbox" id="featReExecute" /> Re-Execute
-        </label>
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-          <input type="checkbox" id="featLockStrike" checked /> Lock Strike
-        </label>
-      </div>
-    </div>
+    <!-- ===== Main: results canvas ===== -->
+    <main class="canvas">
 
-    <!-- 4. Multiple Case & Leg Grid (Screen Recorder 03:25 - 05:40) -->
-    <div class="panel">
-      <div class="panel-header">
-        <div style="display:flex; gap:12px; align-items:center;">
-          <span style="font-weight:700;">Multiple Case:</span>
-          <select id="caseType" style="width:180px;">
-            <option value="single">Select Parallel Cases</option>
-            <option value="sequential">Select Sequential Cases</option>
-          </select>
-        </div>
-        <button class="btn-purple btn-sm" onclick="addLegRow()">+ Add Leg</button>
+      <div id="emptyState" class="empty-state">
+        <p class="empty-title">Nothing backtested yet</p>
+        <p class="empty-body">Upload a CSV of historical OHLC data, define your entry and exit rules on the left, then run the backtest.</p>
       </div>
 
-      <!-- Entry When Rule Box -->
-      <div class="cond-box">
-        <div class="cond-content">
-          <span class="cond-tag entry">Entry When:</span>
-          <div id="entryChipsContainer" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
-        </div>
-        <button class="btn-purple btn-sm" onclick="openSignalModal('entry')">✏️ Edit</button>
-      </div>
+      <div id="resultsView" class="results-view hidden">
 
-      <!-- Exit When Rule Box -->
-      <div class="cond-box">
-        <div class="cond-content">
-          <span class="cond-tag exit">Exit When:</span>
-          <div id="exitChipsContainer" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
-        </div>
-        <button class="btn-purple btn-sm" onclick="openSignalModal('exit')">✏️ Edit</button>
-      </div>
+        <section class="metric-strip" id="metricStrip"></section>
 
-      <!-- Leg Execution Matrix -->
-      <table class="leg-table" id="legTable">
-        <thead>
-          <tr>
-            <th>Action</th>
-            <th>Segment</th>
-            <th>Instrument</th>
-            <th>Lot</th>
-            <th>Action</th>
-            <th>Stop Loss</th>
-            <th>Take Profit</th>
-            <th>Quick Adjustments 👑</th>
-            <th>Delete</th>
-          </tr>
-        </thead>
-        <tbody id="legTableBody">
-          <tr>
-            <td><span class="tag-buy">BUY</span></td>
-            <td>
-              <select style="width:90px;">
-                <option value="Option" selected>Option</option>
-                <option value="Futures">Futures</option>
-                <option value="Equity">Equity</option>
-              </select>
-            </td>
-            <td>
-              <div style="display:flex; gap:4px;">
-                <select style="width:100px;"><option value="current_week">Current Week</option></select>
-                <select style="width:90px;"><option value="spot_based">Spot Based</option></select>
-                <select style="width:75px;"><option value="ATM">ATM</option><option value="OTM1">OTM 1</option><option value="ITM1">ITM 1</option></select>
-                <button class="btn-sm" style="background:#10b981; color:#fff; border:none; font-weight:700; border-radius:4px; cursor:pointer;">CE</button>
-              </div>
-            </td>
-            <td><input type="number" value="1" style="width:50px;" /></td>
-            <td><button class="btn-sm" style="background:#10b981; color:#fff; border:none; font-weight:700; border-radius:4px;">Buy</button></td>
-            <td><div style="display:flex; gap:2px;"><input type="number" value="25" style="width:50px;" /><span style="align-self:center; font-size:11px;">%</span></div></td>
-            <td><div style="display:flex; gap:2px;"><input type="number" value="50" style="width:50px;" /><span style="align-self:center; font-size:11px;">%</span></div></td>
-            <td><button class="btn-purple btn-sm">+ Quick Adjustments</button></td>
-            <td><button class="btn-sm" style="background:#271b3d; border:none; color:var(--red); cursor:pointer;" onclick="this.closest('tr').remove()">✕</button></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 5. Advanced Risk Targets & Execution Window (Screen Recorder 06:10 - 06:40) -->
-    <div class="panel">
-      <div class="grid-3">
-        <div>
-          <div class="panel-title">Transaction Targets</div>
-          <div style="display:flex; gap:8px;">
-            <div style="flex:1;"><label>Stop Loss (%)</label><input type="number" id="txSL" value="25" /></div>
-            <div style="flex:1;"><label>Take Profit (%)</label><input type="number" id="txTP" value="50" /></div>
+        <section class="panel">
+          <h2 class="panel-title">Equity curve</h2>
+          <div class="chart-wrap">
+            <canvas id="equityChart"></canvas>
           </div>
-        </div>
-        <div>
-          <div class="panel-title">Daily Targets</div>
-          <div style="display:flex; gap:8px;">
-            <div style="flex:1;"><label>Stop Loss (₹)</label><input type="number" id="dailyLoss" value="5000" /></div>
-            <div style="flex:1;"><label>Take Profit (₹)</label><input type="number" id="dailyProfit" value="15000" /></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header-row">
+            <h2 class="panel-title">Trade log</h2>
+            <button id="exportBtn" class="btn btn-ghost btn-small">Export CSV</button>
           </div>
-        </div>
-        <div>
-          <div class="panel-title">Expiry & Execution</div>
-          <div style="display:flex; gap:8px;">
-            <div style="flex:1;"><label>Trade Type</label>
-              <select id="tradeType">
-                <option value="intraday" selected>Intraday</option>
-                <option value="positional">Positional</option>
-              </select>
-            </div>
-            <div style="flex:1;"><label>Trade During</label><input type="text" value="09:15 - 15:14" readonly /></div>
-            <div style="flex:1;"><label>Max Trans/Day</label><input type="number" id="maxTrades" value="1" /></div>
+          <div class="table-wrap">
+            <table id="tradeTable">
+              <thead>
+                <tr>
+                  <th>#</th><th>Side</th><th>Entry date</th><th>Entry price</th>
+                  <th>Exit date</th><th>Exit price</th><th>Qty</th>
+                  <th>P&amp;L</th><th>P&amp;L %</th><th>Reason</th><th>Bars held</th>
+                </tr>
+              </thead>
+              <tbody id="tradeTableBody"></tbody>
+            </table>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div style="display:flex; justify-content:flex-end; margin-top:16px;">
-        <button class="btn-purple" style="padding:10px 28px; font-size:14px;" onclick="runAlgoverseEngine()">
-          ⚡ Run
-        </button>
       </div>
-    </div>
-
-    <!-- 6. Results Dashboard & TradingView Chart -->
-    <div class="panel" id="chart-panel">
-      <div class="panel-title">Strategy Performance Summary</div>
-      <div class="kpi-grid">
-        <div class="kpi-card">
-          <div class="kpi-title">Net Realized PnL</div>
-          <div class="kpi-val" id="kpiNetPnL">₹0.00</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">Total Return</div>
-          <div class="kpi-val" id="kpiReturn">0.0%</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">Win Rate</div>
-          <div class="kpi-val" id="kpiWinRate">0.0%</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">Total Trades</div>
-          <div class="kpi-val" id="kpiTrades">0</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">STT & Charges</div>
-          <div class="kpi-val" style="color:var(--red);" id="kpiTaxes">₹0.00</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">Max Drawdown</div>
-          <div class="kpi-val" style="color:var(--red);" id="kpiDrawdown">0.0%</div>
-        </div>
-      </div>
-      <div id="chart"></div>
-    </div>
-
+    </main>
   </div>
+</div>
 
-  <!-- MODAL 1: ADD INDICATOR (Screen Recorder 01:07 - 03:20) -->
-  <div class="modal-backdrop" id="indicatorModal">
-    <div class="modal">
-      <div class="modal-header">
-        <span>Add Indicator</span>
-        <span class="modal-close" onclick="closeIndicatorModal()">&times;</span>
-      </div>
-      <div class="modal-body">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-          <div>
-            <label>Indicator Type</label>
-            <select id="mIndType" onchange="syncIndicatorModalFields()">
-              <option value="SMA">SMA (Simple Moving Average)</option>
-              <option value="SuperTrend">Super Trend</option>
-              <option value="EMA">EMA (Exponential Moving Average)</option>
-              <option value="VWAP">VWAP (Volume Weighted Average Price)</option>
-              <option value="Pivots">Pivot Points (Standard Floor Trader)</option>
-              <option value="RSI">RSI (Relative Strength Index)</option>
-              <option value="BollingerBands">Bollinger Band</option>
-              <option value="ADX">ADX (Average Directional Index)</option>
-            </select>
-          </div>
-          <div>
-            <label>Name</label>
-            <input type="text" id="mIndName" value="sma" />
-          </div>
-          <div style="grid-column: span 2;">
-            <label>Chart Type</label>
-            <div class="btn-group" id="mChartTypeGroup">
-              <button type="button" class="active" onclick="setChartType(this, 'Candle')">Candle</button>
-              <button type="button" onclick="setChartType(this, 'Heikin Ashi')">Heikin Ashi</button>
-              <button type="button" onclick="setChartType(this, 'Open Interest')">Open Interest</button>
-              <button type="button" onclick="setChartType(this, 'Volume')">Volume</button>
-            </div>
-          </div>
-          <div id="periodBox">
-            <label>Period</label>
-            <input type="number" id="mIndPeriod" value="9" />
-          </div>
-          <div id="multiplierBox" style="display:none;">
-            <label>Multiplier</label>
-            <input type="number" id="mIndMultiplier" value="2" step="0.5" />
-          </div>
-          <div id="intervalBox">
-            <label>Candle Interval</label>
-            <select id="mIndInterval">
-              <option value="5 minutes" selected>5 minutes</option>
-              <option value="15 minutes">15 minutes</option>
-              <option value="1 hour">1 hour</option>
-              <option value="Day">Day</option>
-            </select>
-          </div>
-          <div>
-            <label>Field</label>
-            <input type="text" id="mIndField" value="Equity" readonly />
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-purple" onclick="saveNewIndicator()">Save</button>
-      </div>
+<!-- ===== Indicator picker modal ===== -->
+<div id="indicatorModal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Add indicator</h3>
+      <button class="modal-close" data-close-modal>&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="field">
+        <span>Type</span>
+        <select id="indicatorTypeSelect"></select>
+      </label>
+      <div id="indicatorParamsFields" class="field-grid"></div>
+      <label class="field">
+        <span>Instance name</span>
+        <input type="text" id="indicatorInstanceName" placeholder="e.g. fastSma">
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn btn-accent" id="saveIndicatorBtn">Save indicator</button>
     </div>
   </div>
+</div>
 
-  <!-- MODAL 2: ADD SIGNAL (Screen Recorder 03:25 - 04:35) -->
-  <div class="modal-backdrop" id="signalModal">
-    <div class="modal" style="width:740px;">
-      <div class="modal-header">
-        <span id="signalModalTitle">Add Signal</span>
-        <span class="modal-close" onclick="closeSignalModal()">&times;</span>
-      </div>
-      <div class="modal-body">
-        <div id="signalRowsContainer">
-          <!-- Dynamic Condition Rows -->
-        </div>
-        <button class="btn-purple btn-sm" style="margin-top:8px;" onclick="addSignalConditionRow()">+ Add Condition</button>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-purple" onclick="saveSignalConditions()">Save</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // Password Authentication Logic
-    function verifyPassword() {
-      const pass = document.getElementById('sitePassword').value;
-      if (pass === "gmsbacktest123") {
-        sessionStorage.setItem("gms_auth", "true");
-        document.getElementById('auth-overlay').style.display = 'none';
-      } else {
-        document.getElementById('authError').style.display = 'block';
-      }
-    }
-    if (sessionStorage.getItem("gms_auth") === "true") {
-      document.getElementById('auth-overlay').style.display = 'none';
-    }
-
-    // Active Indicator Pool (Matches Screen Recorder 01:07 - 03:20)
-    let indicatorPool = [
-      { id: 1, type: 'Current Candle', name: 'Current', interval: '5 Minutes', field: 'Equity', chartType: 'Candle' },
-      { id: 2, type: 'Simple Moving Average', name: 'Sma', period: 9, interval: '5 Minutes', field: 'Equity', chartType: 'Candle' },
-      { id: 3, type: 'Super Trend', name: 'Super Trend', period: 10, multiplier: 2, interval: '5 Minutes', field: 'Equity', chartType: 'Candle' },
-      { id: 4, type: 'Exponential Moving Average', name: 'Exponential Moving Average 1', period: 9, interval: '5 Minutes', field: 'Equity', chartType: 'Candle' },
-      { id: 5, type: 'Exponential Moving Average', name: 'Exponential Moving Average 2', period: 20, interval: '5 Minutes', field: 'Equity', chartType: 'Candle' },
-      { id: 6, type: 'Volume Weighted Average Price', name: 'Vwap', price: 'Typical', chartType: 'Candle' },
-      { id: 7, type: 'Pivot Points', name: 'Pivot Points', category: 'Traditional', timeFrame: 'Day', chartType: 'Candle' }
-    ];
-
-    // Signal Condition States (Matches Screen Recorder 03:25 - 05:10)
-    let entryConditions = [
-      { left: "Current Close", op: "Is Above", right: "Super Trend", logic: "AND" },
-      { left: "Current Close", op: "Is Above", right: "Vwap Current Day VWAP", logic: "AND" },
-      { left: "Pivot Points R-1", op: "Is Below", right: "Current Close", logic: "AND" },
-      { left: "Exponential Moving Average 1", op: "Is Below", right: "Current Close", logic: "" }
-    ];
-
-    let exitConditions = [
-      { left: "Current Close", op: "Is Below", right: "Super Trend", logic: "" }
-    ];
-
-    let selectedChartType = 'Candle';
-    let currentEditingSignal = 'entry';
-    let tvChart = null;
-    let tvCandles = null;
-
-    // Render Full Indicator Rows (Exact look of screen recorder)
-    function renderIndicatorRows() {
-      const container = document.getElementById('indicatorRowsContainer');
-      container.innerHTML = "";
-      indicatorPool.forEach((ind, i) => {
-        const row = document.createElement('div');
-        row.className = 'indicator-row';
-
-        let pillsHTML = `<span class="tag-pill">Name: <strong>${ind.name}</strong></span>`;
-        if (ind.period) pillsHTML += `<span class="tag-pill">Period: <strong>${ind.period}</strong></span>`;
-        if (ind.multiplier) pillsHTML += `<span class="tag-pill">Multiplier: <strong>${ind.multiplier}</strong></span>`;
-        if (ind.interval) pillsHTML += `<span class="tag-pill">Candle Interval: <strong>${ind.interval}</strong></span>`;
-        if (ind.field) pillsHTML += `<span class="tag-pill">Field: <strong>${ind.field}</strong></span>`;
-        if (ind.category) pillsHTML += `<span class="tag-pill">Category: <strong>${ind.category}</strong></span>`;
-        if (ind.timeFrame) pillsHTML += `<span class="tag-pill">Time Frame: <strong>${ind.timeFrame}</strong></span>`;
-        if (ind.chartType) pillsHTML += `<span class="tag-pill">Chart Type: <strong>${ind.chartType}</strong></span>`;
-
-        row.innerHTML = `
-          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <strong style="color:#fff; min-width:140px;">${ind.type}</strong>
-            ${pillsHTML}
-          </div>
-          <div style="display:flex; gap:6px;">
-            <button class="btn-purple btn-sm" onclick="editIndicator(${ind.id})">✏️ Edit</button>
-            ${i > 0 ? `<button class="btn-sm" style="background:#28183e; border:none; color:var(--red); cursor:pointer;" onclick="deleteIndicator(${ind.id})">🗑️ Delete</button>` : ''}
-          </div>
-        `;
-        container.appendChild(row);
-      });
-    }
-
-    // Modal 1: Add Indicator
-    function openIndicatorModal() {
-      document.getElementById('indicatorModal').style.display = 'flex';
-      syncIndicatorModalFields();
-    }
-    function closeIndicatorModal() { document.getElementById('indicatorModal').style.display = 'none'; }
-
-    function setChartType(btn, val) {
-      document.querySelectorAll('#mChartTypeGroup button').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      selectedChartType = val;
-    }
-
-    function syncIndicatorModalFields() {
-      const t = document.getElementById('mIndType').value;
-      document.getElementById('mIndName').value = t.toLowerCase();
-      document.getElementById('multiplierBox').style.display = t === 'SuperTrend' ? 'block' : 'none';
-      document.getElementById('periodBox').style.display = (t === 'VWAP' || t === 'Pivots') ? 'none' : 'block';
-      document.getElementById('mIndPeriod').value = t === 'SuperTrend' ? 10 : (t === 'RSI' ? 14 : (t === 'EMA' ? 9 : 20));
-    }
-
-    function saveNewIndicator() {
-      const type = document.getElementById('mIndType').value;
-      indicatorPool.push({
-        id: Date.now(),
-        type: type === 'SMA' ? 'Simple Moving Average' : (type === 'EMA' ? 'Exponential Moving Average' : type),
-        name: document.getElementById('mIndName').value,
-        period: parseInt(document.getElementById('mIndPeriod').value) || 9,
-        multiplier: parseFloat(document.getElementById('mIndMultiplier').value) || 2,
-        interval: document.getElementById('mIndInterval').value,
-        field: 'Equity',
-        chartType: selectedChartType
-      });
-      renderIndicatorRows();
-      closeIndicatorModal();
-    }
-
-    function deleteIndicator(id) {
-      indicatorPool = indicatorPool.filter(ind => ind.id !== id);
-      renderIndicatorRows();
-    }
-
-    function editIndicator(id) {
-      const ind = indicatorPool.find(item => item.id === id);
-      if (!ind) return;
-      openIndicatorModal();
-      document.getElementById('mIndName').value = ind.name;
-      if (ind.period) document.getElementById('mIndPeriod').value = ind.period;
-    }
-
-    // Modal 2: Add Signal Condition Builder
-    function openSignalModal(mode) {
-      currentEditingSignal = mode;
-      document.getElementById('signalModalTitle').innerText = mode === 'entry' ? "Add Signal (Entry Rules)" : "Add Signal (Exit Rules)";
-      renderSignalBuilderRows(mode === 'entry' ? entryConditions : exitConditions);
-      document.getElementById('signalModal').style.display = 'flex';
-    }
-    function closeSignalModal() { document.getElementById('signalModal').style.display = 'none'; }
-
-    function getIndicatorOptionsHTML() {
-      let opts = `
-        <option value="Current Close">Current Close</option>
-        <option value="Current Open">Current Open</option>
-        <option value="Current High">Current High</option>
-        <option value="Current Low">Current Low</option>
-        <option value="Current Volume">Current Volume</option>
-        <option value="Super Trend">Super Trend</option>
-        <option value="Vwap Current Day VWAP">Vwap Current Day VWAP</option>
-        <option value="Pivot Points Pivot Point">Pivot Points Pivot Point</option>
-        <option value="Pivot Points R-1">Pivot Points R-1</option>
-        <option value="Pivot Points R-2">Pivot Points R-2</option>
-        <option value="Pivot Points S-1">Pivot Points S-1</option>
-      `;
-      indicatorPool.forEach(ind => {
-        if (!opts.includes(`value="${ind.name}"`)) {
-          opts += `<option value="${ind.name}">${ind.name}</option>`;
-        }
-      });
-      return opts;
-    }
-
-    function renderSignalBuilderRows(conditions) {
-      const container = document.getElementById('signalRowsContainer');
-      container.innerHTML = "";
-      conditions.forEach((c, idx) => {
-        const row = document.createElement('div');
-        row.innerHTML = `
-          <div class="signal-row">
-            <select class="sig-left">${getIndicatorOptionsHTML()}</select>
-            <select class="sig-op">
-              <option value="Is Above">Is Above</option>
-              <option value="Is Below">Is Below</option>
-              <option value="Crosses Above">Crosses Above</option>
-              <option value="Crosses Below">Crosses Below</option>
-            </select>
-            <select class="sig-right">${getIndicatorOptionsHTML()}</select>
-            <button class="btn-sm" style="background:#2b1d47; border:none; color:var(--red); cursor:pointer;" onclick="this.closest('.signal-row').remove()">✕</button>
-          </div>
-          ${idx < conditions.length - 1 ? `
-            <div class="logic-divider">
-              <button class="btn-logic" onclick="toggleLogic(this)">${c.logic || 'AND'}</button>
-            </div>
-          ` : ''}
-        `;
-        container.appendChild(row);
-        row.querySelector('.sig-left').value = c.left;
-        row.querySelector('.sig-op').value = c.op;
-        row.querySelector('.sig-right').value = c.right;
-      });
-    }
-
-    function addSignalConditionRow() {
-      const container = document.getElementById('signalRowsContainer');
-      const divider = document.createElement('div');
-      divider.className = "logic-divider";
-      divider.innerHTML = `<button class="btn-logic" onclick="toggleLogic(this)">AND</button>`;
-      container.appendChild(divider);
-
-      const row = document.createElement('div');
-      row.className = "signal-row";
-      row.innerHTML = `
-        <select class="sig-left">${getIndicatorOptionsHTML()}</select>
-        <select class="sig-op">
-          <option value="Is Above">Is Above</option>
-          <option value="Is Below">Is Below</option>
-          <option value="Crosses Above">Crosses Above</option>
-          <option value="Crosses Below">Crosses Below</option>
-        </select>
-        <select class="sig-right">${getIndicatorOptionsHTML()}</select>
-        <button class="btn-sm" style="background:#2b1d47; border:none; color:var(--red); cursor:pointer;" onclick="this.closest('.signal-row').remove()">✕</button>
-      `;
-      container.appendChild(row);
-    }
-
-    function toggleLogic(btn) {
-      btn.innerText = btn.innerText === 'AND' ? 'OR' : 'AND';
-    }
-
-    function saveSignalConditions() {
-      const rows = document.querySelectorAll('.signal-row');
-      const logics = document.querySelectorAll('.btn-logic');
-      const compiled = [];
-
-      rows.forEach((r, idx) => {
-        compiled.push({
-          left: r.querySelector('.sig-left').value,
-          op: r.querySelector('.sig-op').value,
-          right: r.querySelector('.sig-right').value,
-          logic: logics[idx] ? logics[idx].innerText : ""
-        });
-      });
-
-      if (currentEditingSignal === 'entry') entryConditions = compiled;
-      else exitConditions = compiled;
-
-      renderRuleChips();
-      closeSignalModal();
-    }
-
-    function renderRuleChips() {
-      const eCont = document.getElementById('entryChipsContainer');
-      eCont.innerHTML = entryConditions.map(c => `
-        <span class="rule-chip">${c.left} <strong>${c.op}</strong> ${c.right}</span>
-        ${c.logic ? `<span style="color:var(--accent); font-weight:700; font-size:10px;">${c.logic}</span>` : ''}
-      `).join('');
-
-      const xCont = document.getElementById('exitChipsContainer');
-      xCont.innerHTML = exitConditions.map(c => `
-        <span class="rule-chip">${c.left} <strong>${c.op}</strong> ${c.right}</span>
-        ${c.logic ? `<span style="color:var(--accent); font-weight:700; font-size:10px;">${c.logic}</span>` : ''}
-      `).join('');
-    }
-
-    function addLegRow() {
-      const tbody = document.getElementById('legTableBody');
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><span class="tag-sell">SELL</span></td>
-        <td><select style="width:90px;"><option value="Option">Option</option><option value="Futures">Futures</option></select></td>
-        <td>
-          <div style="display:flex; gap:4px;">
-            <select style="width:100px;"><option value="current_week">Current Week</option></select>
-            <select style="width:90px;"><option value="spot_based">Spot Based</option></select>
-            <select style="width:75px;"><option value="ATM">ATM</option><option value="OTM1">OTM 1</option></select>
-            <button class="btn-sm" style="background:#ef4444; color:#fff; border:none; font-weight:700; border-radius:4px;">PE</button>
-          </div>
-        </td>
-        <td><input type="number" value="1" style="width:50px;" /></td>
-        <td><button class="btn-sm" style="background:#ef4444; color:#fff; border:none; font-weight:700; border-radius:4px;">Sell</button></td>
-        <td><div style="display:flex; gap:2px;"><input type="number" value="25" style="width:50px;" /><span style="align-self:center; font-size:11px;">%</span></div></td>
-        <td><div style="display:flex; gap:2px;"><input type="number" value="50" style="width:50px;" /><span style="align-self:center; font-size:11px;">%</span></div></td>
-        <td><button class="btn-purple btn-sm">+ Quick Adjustments</button></td>
-        <td><button class="btn-sm" style="background:#271b3d; border:none; color:var(--red); cursor:pointer;" onclick="this.closest('tr').remove()">✕</button></td>
-      `;
-      tbody.appendChild(tr);
-    }
-
-    function initChart() {
-      const el = document.getElementById('chart');
-      el.innerHTML = "";
-      tvChart = LightweightCharts.createChart(el, {
-        width: el.clientWidth,
-        height: 480,
-        layout: { background: { color: '#150e26' }, textColor: '#9b8ebb' },
-        grid: { vertLines: { color: '#241a3d' }, horzLines: { color: '#241a3d' } },
-        timeScale: { borderColor: '#2c1e4d' }
-      });
-      tvCandles = tvChart.addCandlestickSeries({
-        upColor: '#10b981', downColor: '#ef4444',
-        wickUpColor: '#10b981', wickDownColor: '#ef4444',
-        borderVisible: false
-      });
-      window.addEventListener('resize', () => tvChart.applyOptions({ width: el.clientWidth }));
-    }
-
-    // High-Fidelity Indian Market Data Engine (100% reliable, zero CORS/proxy errors)
-    function generateIndianMarketData(symbol) {
-      const basePrice = symbol.includes('BANK') ? 51200 : (symbol.includes('MID') ? 12800 : (symbol.includes('SENSEX') ? 81500 : 24600));
-      const candles = [];
-      let curr = basePrice;
-      const now = new Date();
-
-      for (let i = 240; i >= 0; i--) {
-        const d = new Date(now.getTime() - i * 86400000);
-        if (d.getDay() === 0 || d.getDay() === 6) continue;
-        const change = (Math.random() - 0.485) * (basePrice * 0.012);
-        const open = curr;
-        const close = curr + change;
-        const high = Math.max(open, close) + Math.random() * (basePrice * 0.004);
-        const low = Math.min(open, close) - Math.random() * (basePrice * 0.004);
-        candles.push({
-          time: d.toISOString().split('T')[0],
-          open: +open.toFixed(2),
-          high: +high.toFixed(2),
-          low: +low.toFixed(2),
-          close: +close.toFixed(2),
-          volume: Math.floor(150000 + Math.random() * 450000)
-        });
-        curr = close;
-      }
-      return candles;
-    }
-
-    // Backtest Strategy Simulation Engine
-    function runAlgoverseEngine() {
-      const sym = document.getElementById('instrument').value;
-      const txSL = parseFloat(document.getElementById('txSL').value) || 25;
-      const txTP = parseFloat(document.getElementById('txTP').value) || 50;
-
-      const candles = generateIndianMarketData(sym);
-
-      let capital = 100000;
-      let peak = capital;
-      let maxDD = 0;
-      let totalCharges = 0;
-      let pos = 0, entryPrem = 0;
-      let wins = 0, totalTrades = 0;
-      const markers = [];
-
-      for (let i = 20; i < candles.length; i++) {
-        const c = candles[i];
-        const prev = candles[i - 1];
-
-        // 20-period SMA
-        let sum = 0;
-        for (let j = 0; j < 20; j++) sum += candles[i - j].close;
-        const sma20 = sum / 20;
-
-        // Daily Pivot Point
-        const pivotP = (prev.high + prev.low + prev.close) / 3;
-        const pivotR1 = (2 * pivotP) - prev.low;
-
-        // Synthetic ATM option pricing
-        const premium = +(c.close * 0.018).toFixed(2);
-
-        // Position Active: Check Exit Rules
-        if (pos > 0) {
-          const changePct = ((premium - entryPrem) / entryPrem) * 100;
-          let exit = false;
-
-          if (changePct >= txTP) exit = true;
-          else if (changePct <= -txSL) exit = true;
-          else if (c.close < sma20) exit = true;
-
-          if (exit) {
-            const pnl = (premium - entryPrem) * 50; // 1 Lot (Nifty 50)
-            const charges = 40 + Math.abs(pnl * 0.001); // STT & turnover charges
-            capital += (pnl - charges);
-            totalCharges += charges;
-            totalTrades++;
-            if (pnl > 0) wins++;
-
-            markers.push({
-              time: c.time, position: 'aboveBar', color: '#ef4444', shape: 'arrowDown',
-              text: `EXIT`
-            });
-            pos = 0;
-          }
-        }
-
-        // Position Inactive: Check Entry Rules (Matches configured signals)
-        if (pos === 0) {
-          const isAboveSma = c.close > sma20;
-          const isGreen = c.close > c.open;
-          const isAbovePivot = c.close > pivotP;
-
-          if (isAboveSma && isGreen && isAbovePivot) {
-            pos = 1;
-            entryPrem = premium;
-            markers.push({
-              time: c.time, position: 'belowBar', color: '#10b981', shape: 'arrowUp',
-              text: `ATM BUY`
-            });
-          }
-        }
-
-        const equity = capital + (pos * (premium - entryPrem) * 50);
-        if (equity > peak) peak = equity;
-        const dd = ((peak - equity) / peak) * 100;
-        if (dd > maxDD) maxDD = dd;
-      }
-
-      // Update KPIs
-      const retPct = ((capital - 100000) / 100000) * 100;
-      const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
-
-      const pnlEl = document.getElementById('kpiNetPnL');
-      pnlEl.innerText = `₹${capital.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
-      pnlEl.style.color = capital >= 100000 ? 'var(--green)' : 'var(--red)';
-
-      const retEl = document.getElementById('kpiReturn');
-      retEl.innerText = `${retPct.toFixed(2)}%`;
-      retEl.style.color = retPct >= 0 ? 'var(--green)' : 'var(--red)';
-
-      document.getElementById('kpiWinRate').innerText = `${winRate.toFixed(1)}%`;
-      document.getElementById('kpiTrades').innerText = totalTrades;
-      document.getElementById('kpiTaxes').innerText = `₹${totalCharges.toFixed(2)}`;
-      document.getElementById('kpiDrawdown').innerText = `${maxDD.toFixed(1)}%`;
-
-      initChart();
-      tvCandles.setData(candles);
-      tvCandles.setMarkers(markers);
-      tvChart.timeScale().fitContent();
-    }
-
-    // Initialize Studio on Load
-    window.onload = () => {
-      renderIndicatorRows();
-      renderRuleChips();
-      runAlgoverseEngine();
-    };
-  </script>
+<script src="indicators.js"></script>
+<script src="backtest.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
