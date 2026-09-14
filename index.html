@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Indian Market Backtester (Zero-Python)</title>
-  <!-- TradingView Lightweight Charts Library -->
+  <title>Indian Market Backtester (Taxes, Trailing SL & Partial Exits)</title>
+  <!-- TradingView Lightweight Charts CDN -->
   <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     * { box-sizing: border-box; }
@@ -15,104 +15,281 @@
       background: #131722;
       color: #d1d4dc;
     }
+    .panel {
+      background: #1e222d;
+      border: 1px solid #2a2e39;
+      border-radius: 6px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
     .controls {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
       align-items: center;
-      background: #1e222d;
-      padding: 14px;
-      border-radius: 6px;
-      margin-bottom: 16px;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 11px;
+      color: #787b86;
+      text-transform: uppercase;
+      font-weight: 600;
     }
     input, select, button {
       background: #2a2e39;
       color: #fff;
       border: 1px solid #363c4e;
       border-radius: 4px;
-      padding: 8px 12px;
-      font-size: 14px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+    input[type="number"] { width: 68px; }
+    input[type="checkbox"] { width: auto; cursor: pointer; }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: #d1d4dc;
+      font-size: 12px;
+      cursor: pointer;
+      text-transform: none;
     }
     button {
       background: #2962ff;
       border: none;
       font-weight: 600;
+      padding: 8px 16px;
       cursor: pointer;
+      color: #fff;
+      margin-top: auto;
     }
     button:hover { background: #1e4bd8; }
     .stats-bar {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
       margin-bottom: 16px;
     }
     .stat-box {
       background: #1e222d;
       border: 1px solid #2a2e39;
       border-radius: 6px;
-      padding: 12px;
+      padding: 10px 12px;
     }
-    .stat-label { font-size: 11px; text-transform: uppercase; color: #787b86; }
-    .stat-val { font-size: 18px; font-weight: bold; margin-top: 4px; }
+    .stat-label { font-size: 10px; text-transform: uppercase; color: #787b86; font-weight: 600; }
+    .stat-val { font-size: 16px; font-weight: bold; margin-top: 4px; }
     .green { color: #26a69a; }
     .red { color: #ef5350; }
     #chart {
       width: 100%;
-      height: 540px;
+      height: 520px;
       background: #1e222d;
       border-radius: 6px;
       border: 1px solid #2a2e39;
+      margin-bottom: 16px;
     }
-    .file-label {
-      cursor: pointer;
-      background: #363c4e;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 13px;
+    .legend {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .table-container {
+      background: #1e222d;
+      border-radius: 6px;
+      border: 1px solid #2a2e39;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 12px;
+    }
+    th, td {
+      padding: 9px 11px;
+      border-bottom: 1px solid #2a2e39;
+      white-space: nowrap;
+    }
+    th {
+      background: #242732;
+      color: #787b86;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+    .cond-cell {
+      white-space: normal;
+      min-width: 280px;
+      line-height: 1.3;
+      font-family: monospace;
+      font-size: 11px;
+    }
+    .matrix-cell {
+      font-family: monospace;
+      font-size: 10px;
+      color: #b2b5be;
+      white-space: normal;
+      min-width: 180px;
+      line-height: 1.2;
+    }
+    .badge-buy {
+      background: rgba(38, 166, 154, 0.2);
+      color: #26a69a;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: bold;
+    }
+    .badge-partial {
+      background: rgba(41, 98, 255, 0.25);
+      color: #82b1ff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: bold;
+    }
+    .badge-sell {
+      background: rgba(239, 83, 80, 0.2);
+      color: #ef5350;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
 
-  <div class="controls">
-    <label>NSE Ticker:
-      <input id="ticker" type="text" value="RELIANCE.NS" placeholder="e.g. TCS.NS, INFY.NS" />
-    </label>
-    <label>Range:
-      <select id="range">
-        <option value="6mo">6 Months</option>
-        <option value="1y" selected>1 Year</option>
-        <option value="2y">2 Years</option>
-      </select>
-    </label>
-    <label>Fast MA:
-      <input id="fastMa" type="number" value="20" style="width: 55px;" />
-    </label>
-    <label>Slow MA:
-      <input id="slowMa" type="number" value="50" style="width: 55px;" />
-    </label>
-    <button onclick="fetchAndTest()">Run Backtest</button>
+  <div class="panel">
+    <div class="controls">
+      <div class="control-group">
+        <label>Ticker (NSE)</label>
+        <input id="ticker" type="text" value="RELIANCE.NS" style="width: 110px;" />
+      </div>
 
-    <span style="color:#787b86;">|</span>
+      <div class="control-group">
+        <label>Range</label>
+        <select id="range">
+          <option value="6mo">6M</option>
+          <option value="1y" selected>1Y</option>
+          <option value="2y">2Y</option>
+        </select>
+      </div>
 
-    <label class="file-label">
-      Upload Zerodha/NSE CSV
-      <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="loadCSV(event)" />
-    </label>
+      <div class="control-group">
+        <label>Fast MA</label>
+        <input id="fastMa" type="number" value="20" />
+      </div>
+
+      <div class="control-group">
+        <label>Slow MA</label>
+        <input id="slowMa" type="number" value="50" />
+      </div>
+
+      <div class="control-group">
+        <label>Min ADX</label>
+        <input id="minAdx" type="number" value="20" />
+      </div>
+
+      <div class="control-group">
+        <label>Entry Pivot Rule</label>
+        <select id="pivotRule">
+          <option value="above_p" selected>Close > P</option>
+          <option value="above_r1">Close > R1</option>
+          <option value="above_r2">Close > R2</option>
+          <option value="none">Any (Off)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Target 1 (TP1)</label>
+        <select id="tp1Mode">
+          <option value="r1">Target R1</option>
+          <option value="r2" selected>Target R2</option>
+          <option value="r3">Target R3</option>
+          <option value="fixed">Fixed %</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Target 2 (TP2)</label>
+        <select id="tp2Mode">
+          <option value="r2">Target R2</option>
+          <option value="r3" selected>Target R3</option>
+          <option value="r4">Target R4</option>
+          <option value="r5">Target R5</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Fixed TP %</label>
+        <input id="targetPct" type="number" value="5.0" step="0.5" />
+      </div>
+
+      <div class="control-group">
+        <label>Initial SL %</label>
+        <input id="stopLossPct" type="number" value="2.0" step="0.5" />
+      </div>
+
+      <div class="control-group">
+        <label>Trailing SL Mode</label>
+        <select id="trailMode">
+          <option value="none">Fixed SL Only</option>
+          <option value="trail_s1" selected>Trail to S1 Pivot</option>
+          <option value="trail_s2">Trail to S2 Pivot</option>
+        </select>
+      </div>
+
+      <div class="control-group" style="margin-top: 14px;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="partialBooking" checked /> <strong>Partial 50% @ TP1</strong>
+        </label>
+      </div>
+
+      <div class="control-group" style="margin-top: 14px;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="deductTaxes" checked /> <strong>Deduct STT & Charges</strong>
+        </label>
+      </div>
+
+      <div class="control-group" style="margin-top: 14px;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="reqVwap" checked /> Close > VWAP
+        </label>
+      </div>
+
+      <div class="control-group" style="margin-top: 14px;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="reqGreen" checked /> Close > Open
+        </label>
+      </div>
+
+      <button onclick="fetchAndTest()">Run Backtest</button>
+    </div>
   </div>
 
   <div class="stats-bar">
     <div class="stat-box">
       <div class="stat-label">Initial Capital</div>
-      <div class="stat-val" id="dispInit">₹1,00,000</div>
+      <div class="stat-val">₹1,00,000</div>
     </div>
     <div class="stat-box">
-      <div class="stat-label">Final Value</div>
+      <div class="stat-label">Final Net Capital</div>
       <div class="stat-val" id="dispFinal">₹0.00</div>
     </div>
     <div class="stat-box">
-      <div class="stat-label">Total Return</div>
+      <div class="stat-label">Net Return</div>
       <div class="stat-val" id="dispReturn">0.00%</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Gross PnL</div>
+      <div class="stat-val" id="dispGross">₹0.00</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">STT, GST & Charges</div>
+      <div class="stat-val red" id="dispTaxes">₹0.00</div>
     </div>
     <div class="stat-box">
       <div class="stat-label">Win Rate</div>
@@ -122,127 +299,544 @@
       <div class="stat-label">Total Trades</div>
       <div class="stat-val" id="dispTrades">0</div>
     </div>
+    <div class="stat-box">
+      <div class="stat-label">Max Drawdown</div>
+      <div class="stat-val red" id="dispDrawdown">0.00%</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="dot" style="background:#2962ff;"></span> Fast MA</div>
+    <div class="legend-item"><span class="dot" style="background:#ff9800;"></span> Slow MA</div>
+    <div class="legend-item"><span class="dot" style="background:#ab47bc;"></span> VWAP</div>
+    <div class="legend-item"><span class="dot" style="background:#ffd54f;"></span> Pivot (P)</div>
+    <div class="legend-item"><span class="dot" style="background:#ef5350;"></span> R1 - R5</div>
+    <div class="legend-item"><span class="dot" style="background:#26a69a;"></span> S1 - S5</div>
   </div>
 
   <div id="chart"></div>
 
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Condition / Rule Triggered</th>
+          <th>Fill Price</th>
+          <th>Qty</th>
+          <th>Trailed SL</th>
+          <th>Gross PnL</th>
+          <th>STT & Charges</th>
+          <th>Net PnL (₹)</th>
+          <th>Net Return</th>
+          <th>Resistances (R1-R5)</th>
+          <th>Supports (S1-S5)</th>
+        </tr>
+      </thead>
+      <tbody id="tradeTableBody">
+        <tr><td colspan="13" style="text-align:center; color:#787b86;">Run backtest to evaluate trades.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
   <script>
-    let chart, candleSeries, fastLine, slowLine;
+    let chart, candleSeries, fastLine, slowLine, vwapLine;
+    let pivotSeries = {};
 
     function initChart() {
       const container = document.getElementById('chart');
       container.innerHTML = "";
       chart = LightweightCharts.createChart(container, {
         width: container.clientWidth,
-        height: 540,
+        height: 520,
         layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
         grid: { vertLines: { color: '#242732' }, horzLines: { color: '#242732' } },
         timeScale: { borderColor: '#363c4e' },
       });
+
       candleSeries = chart.addCandlestickSeries({
         upColor: '#26a69a', downColor: '#ef5350',
         wickUpColor: '#26a69a', wickDownColor: '#ef5350',
         borderVisible: false
       });
+
       fastLine = chart.addLineSeries({ color: '#2962ff', lineWidth: 1.5 });
       slowLine = chart.addLineSeries({ color: '#ff9800', lineWidth: 1.5 });
+      vwapLine = chart.addLineSeries({ color: '#ab47bc', lineWidth: 1.5 });
+
+      pivotSeries['p'] = chart.addLineSeries({ color: '#ffd54f', lineWidth: 1.5, lineStyle: 2 });
+
+      const rColors = ['#ef9a9a', '#e57373', '#ef5350', '#f44336', '#d32f2f'];
+      for (let i = 1; i <= 5; i++) {
+        pivotSeries['r' + i] = chart.addLineSeries({ color: rColors[i - 1], lineWidth: 1, lineStyle: 3 });
+      }
+
+      const sColors = ['#a5d6a7', '#81c784', '#4caf50', '#388e3c', '#1b5e20'];
+      for (let i = 1; i <= 5; i++) {
+        pivotSeries['s' + i] = chart.addLineSeries({ color: sColors[i - 1], lineWidth: 1, lineStyle: 3 });
+      }
 
       window.addEventListener('resize', () => chart.applyOptions({ width: container.clientWidth }));
     }
 
-    // Pure JS Moving Average
-    function calcSMA(data, window) {
-      const result = [];
-      for (let i = 0; i < data.length; i++) {
-        if (i < window - 1) continue;
-        let sum = 0;
-        for (let j = 0; j < window; j++) sum += data[i - j].close;
-        result.push({ time: data[i].time, value: +(sum / window).toFixed(2) });
-      }
-      return result;
+    // Indian Regulatory & Brokerage Calculator (Standard Delivery Equity)
+    function calcIndianTaxes(buyTurnover, sellTurnover, applyTaxes) {
+      if (!applyTaxes) return { brokerage: 0, stt: 0, exch: 0, stamp: 0, sebi: 0, gst: 0, total: 0 };
+      
+      const totalTurnover = buyTurnover + sellTurnover;
+      const brokerage = Math.min(20, buyTurnover * 0.0003) + Math.min(20, sellTurnover * 0.0003); // Flat ₹20 discount broker cap
+      const stt = (buyTurnover * 0.001) + (sellTurnover * 0.001); // 0.1% on delivery Buy & Sell
+      const exch = totalTurnover * 0.0000345; // NSE Turnover fee (0.00345%)
+      const sebi = totalTurnover * 0.000001; // SEBI ₹10 / Crore
+      const stamp = buyTurnover * 0.00015; // Stamp Duty 0.015% on Buy
+      const gst = (brokerage + exch + sebi) * 0.18; // 18% GST on brokerage + exchange fees
+
+      const total = brokerage + stt + exch + sebi + stamp + gst;
+      return {
+        brokerage: +brokerage.toFixed(2),
+        stt: +stt.toFixed(2),
+        exch: +exch.toFixed(2),
+        stamp: +stamp.toFixed(2),
+        sebi: +sebi.toFixed(2),
+        gst: +gst.toFixed(2),
+        total: +total.toFixed(2)
+      };
     }
 
-    // In-Browser Strategy Execution
-    function simulateStrategy(candles, fastP, slowP) {
-      const fastMap = new Map(calcSMA(candles, fastP).map(d => [d.time, d.value]));
-      const slowMap = new Map(calcSMA(candles, slowP).map(d => [d.time, d.value]));
+    function calcSMA(candles, window) {
+      const res = [];
+      for (let i = 0; i < candles.length; i++) {
+        if (i < window - 1) continue;
+        let sum = 0;
+        for (let j = 0; j < window; j++) sum += candles[i - j].close;
+        res.push({ time: candles[i].time, value: +(sum / window).toFixed(2) });
+      }
+      return res;
+    }
 
-      let capital = 100000;
-      let pos = 0;
-      let entryPrice = 0;
-      let wins = 0, closedTrades = 0;
-      const markers = [];
+    function calcRollingVWAP(candles, window = 20) {
+      const res = [];
+      for (let i = 0; i < candles.length; i++) {
+        let sumPV = 0, sumV = 0;
+        const start = Math.max(0, i - window + 1);
+        for (let j = start; j <= i; j++) {
+          const tp = (candles[j].high + candles[j].low + candles[j].close) / 3;
+          const vol = candles[j].volume || 1;
+          sumPV += tp * vol;
+          sumV += vol;
+        }
+        res.push({ time: candles[i].time, value: +(sumPV / (sumV || 1)).toFixed(2) });
+      }
+      return res;
+    }
+
+    function calcADX(candles, period = 14) {
+      const adx = new Array(candles.length).fill(null);
+      if (candles.length <= period * 2) return adx;
+      const tr = [0], plusDM = [0], minusDM = [0];
 
       for (let i = 1; i < candles.length; i++) {
-        const t = candles[i].time;
-        const prevT = candles[i - 1].time;
+        const c = candles[i], p = candles[i - 1];
+        tr.push(Math.max(c.high - c.low, Math.abs(c.high - p.close), Math.abs(c.low - p.close)));
+        const up = c.high - p.high, down = p.low - c.low;
+        plusDM.push((up > down && up > 0) ? up : 0);
+        minusDM.push((down > up && down > 0) ? down : 0);
+      }
+
+      let sTR = 0, sPlus = 0, sMinus = 0;
+      for (let i = 1; i <= period; i++) {
+        sTR += tr[i]; sPlus += plusDM[i]; sMinus += minusDM[i];
+      }
+
+      const dx = new Array(candles.length).fill(0);
+      for (let i = period; i < candles.length; i++) {
+        if (i > period) {
+          sTR = sTR - (sTR / period) + tr[i];
+          sPlus = sPlus - (sPlus / period) + plusDM[i];
+          sMinus = sMinus - (sMinus / period) + minusDM[i];
+        }
+        const pDI = sTR === 0 ? 0 : (sPlus / sTR) * 100;
+        const mDI = sTR === 0 ? 0 : (sMinus / sTR) * 100;
+        const sumDI = pDI + mDI;
+        dx[i] = sumDI === 0 ? 0 : (Math.abs(pDI - mDI) / sumDI) * 100;
+      }
+
+      let sumDX = 0;
+      for (let i = period; i < period * 2; i++) sumDX += dx[i];
+      let prevADX = sumDX / period;
+      adx[period * 2 - 1] = +prevADX.toFixed(2);
+
+      for (let i = period * 2; i < candles.length; i++) {
+        prevADX = (prevADX * (period - 1) + dx[i]) / period;
+        adx[i] = +prevADX.toFixed(2);
+      }
+      return adx;
+    }
+
+    function calcStandardPivots(candles) {
+      const pivots = [];
+      for (let i = 0; i < candles.length; i++) {
+        if (i === 0) {
+          const c = candles[i].close;
+          pivots.push({
+            time: candles[i].time, p: c,
+            r1: c, r2: c, r3: c, r4: c, r5: c,
+            s1: c, s2: c, s3: c, s4: c, s5: c
+          });
+          continue;
+        }
+
+        const prev = candles[i - 1];
+        const range = prev.high - prev.low;
+        const p = (prev.high + prev.low + prev.close) / 3;
+
+        pivots.push({
+          time: candles[i].time,
+          p: +p.toFixed(2),
+          r1: +((2 * p) - prev.low).toFixed(2),
+          r2: +(p + range).toFixed(2),
+          r3: +((2 * p) - prev.low + range).toFixed(2),
+          r4: +(p + 2 * range).toFixed(2),
+          r5: +((2 * p) - prev.low + 2 * range).toFixed(2),
+          s1: +((2 * p) - prev.high).toFixed(2),
+          s2: +(p - range).toFixed(2),
+          s3: +((2 * p) - prev.high - range).toFixed(2),
+          s4: +(p - 2 * range).toFixed(2),
+          s5: +((2 * p) - prev.high - 2 * range).toFixed(2)
+        });
+      }
+      return pivots;
+    }
+
+    function simulateStrategy(candles, cfg) {
+      const fastMap = new Map(calcSMA(candles, cfg.fastP).map(d => [d.time, d.value]));
+      const slowMap = new Map(calcSMA(candles, cfg.slowP).map(d => [d.time, d.value]));
+      const vwapMap = new Map(calcRollingVWAP(candles, 20).map(d => [d.time, d.value]));
+      const pivotList = calcStandardPivots(candles);
+      const pivotMap = new Map(pivotList.map(d => [d.time, d]));
+      const adxList = calcADX(candles, 14);
+
+      let capital = 100000;
+      let peakCapital = capital;
+      let maxDrawdown = 0;
+      let totalGrossPnL = 0;
+      let totalTaxesPaid = 0;
+
+      let pos = 0;
+      let initialPos = 0;
+      let entryPrice = 0;
+      let currentSL = 0;
+      let partialBooked = false;
+      let wins = 0, closedTrades = 0;
+
+      const markers = [];
+      const tradeLogs = [];
+
+      for (let i = 1; i < candles.length; i++) {
+        const c = candles[i];
+        const prev = candles[i - 1];
+        const t = c.time, prevT = prev.time;
+
         const fNow = fastMap.get(t), sNow = slowMap.get(t);
         const fPrev = fastMap.get(prevT), sPrev = slowMap.get(prevT);
+        const vwap = vwapMap.get(t);
+        const pObj = pivotMap.get(t) || { p: 0, r1: 0, r2: 0, r3: 0, r4: 0, r5: 0, s1: 0, s2: 0, s3: 0, s4: 0, s5: 0 };
+        const adx = adxList[i] || 0;
 
-        if (!fNow || !sNow || !fPrev || !sPrev) continue;
+        if (!fNow || !sNow || !fPrev || !sPrev || !vwap) continue;
 
-        // Bullish Crossover -> Buy
-        if (fPrev <= sPrev && fNow > sNow && pos === 0) {
-          pos = Math.floor(capital / candles[i].close);
-          if (pos > 0) {
-            entryPrice = candles[i].close;
-            capital -= pos * entryPrice;
-            markers.push({
-              time: t, position: 'belowBar', color: '#26a69a', shape: 'arrowUp',
-              text: `BUY @ ₹${entryPrice.toFixed(1)}`
+        // Manage Existing Active Positions
+        if (pos > 0) {
+          // Dynamic Trailing SL Calculation
+          if (cfg.trailMode === 'trail_s1' && pObj.s1 > currentSL) {
+            currentSL = pObj.s1; // Ratchet up to rising S1 support
+          } else if (cfg.trailMode === 'trail_s2' && pObj.s2 > currentSL) {
+            currentSL = pObj.s2; // Ratchet up to rising S2 support
+          }
+
+          // Target 1 Price Check
+          const tp1Price = cfg.tp1Mode === 'fixed' ? (entryPrice * (1 + cfg.tpPct / 100)) : (pObj[cfg.tp1Mode] || 0);
+          // Target 2 Price Check
+          const tp2Price = pObj[cfg.tp2Mode] || (entryPrice * (1 + (cfg.tpPct * 1.5) / 100));
+
+          // 1. Partial Profit Booking Check (50% exit at TP1)
+          if (cfg.partialBooking && !partialBooked && tp1Price > entryPrice && c.high >= tp1Price) {
+            const partialQty = Math.floor(pos / 2);
+            if (partialQty > 0) {
+              const exitFill = tp1Price;
+              const buyTurnover = partialQty * entryPrice;
+              const sellTurnover = partialQty * exitFill;
+              const taxes = calcIndianTaxes(buyTurnover, sellTurnover, cfg.deductTaxes);
+              const gross = sellTurnover - buyTurnover;
+              const net = gross - taxes.total;
+
+              capital += sellTurnover - taxes.total;
+              totalGrossPnL += gross;
+              totalTaxesPaid += taxes.total;
+              pos -= partialQty;
+              partialBooked = true;
+
+              // Move Stop-Loss to Breakeven after partial profit booking
+              if (currentSL < entryPrice) currentSL = entryPrice;
+
+              tradeLogs.push({
+                date: t,
+                type: 'PARTIAL SELL (50%)',
+                condition: `TP1 HIT (${cfg.tp1Mode.toUpperCase()}): High ₹${c.high} touched ₹${tp1Price.toFixed(2)} | SL shifted to Breakeven ₹${entryPrice.toFixed(2)}`,
+                fillPrice: exitFill.toFixed(2),
+                qty: partialQty,
+                trailedSL: `₹${currentSL.toFixed(2)}`,
+                grossPnL: gross.toFixed(2),
+                charges: taxes.total.toFixed(2),
+                netPnL: net.toFixed(2),
+                ret: ((net / buyTurnover) * 100).toFixed(2) + '%',
+                pivotObj: pObj
+              });
+
+              markers.push({
+                time: t, position: 'aboveBar', color: '#82b1ff', shape: 'arrowDown',
+                text: `PARTIAL (50%) @ ₹${exitFill.toFixed(1)}`
+              });
+            }
+          }
+
+          // 2. Final Exit Checks (Target 2, Trailing Stop-Loss, or Trend Reversal)
+          let finalExitReason = null;
+          let exitFill = c.close;
+
+          // Hit Target 2
+          if (partialBooked && tp2Price > entryPrice && c.high >= tp2Price) {
+            exitFill = tp2Price;
+            finalExitReason = `TP2 HIT (${cfg.tp2Mode.toUpperCase()}): High ₹${c.high} reached resistance ₹${tp2Price.toFixed(2)}`;
+          }
+          // Hit 100% Target (when partial booking is disabled)
+          else if (!cfg.partialBooking && tp1Price > entryPrice && c.high >= tp1Price) {
+            exitFill = tp1Price;
+            finalExitReason = `TARGET HIT (${cfg.tp1Mode.toUpperCase()}): High ₹${c.high} hit target ₹${tp1Price.toFixed(2)}`;
+          }
+          // Hit Trailing Stop-Loss
+          else if (c.low <= currentSL) {
+            exitFill = currentSL;
+            finalExitReason = `TRAILING SL HIT: Low ₹${c.low} breached trailed stop ₹${currentSL.toFixed(2)}`;
+          }
+          // Moving Average Bearish Death Cross
+          else if (fPrev >= sPrev && fNow < sNow) {
+            exitFill = c.close;
+            finalExitReason = `TREND REVERSAL: Fast MA (${fNow}) crossed below Slow MA (${sNow})`;
+          }
+
+          if (finalExitReason) {
+            const buyTurnover = pos * entryPrice;
+            const sellTurnover = pos * exitFill;
+            const taxes = calcIndianTaxes(buyTurnover, sellTurnover, cfg.deductTaxes);
+            const gross = sellTurnover - buyTurnover;
+            const net = gross - taxes.total;
+
+            capital += sellTurnover - taxes.total;
+            totalGrossPnL += gross;
+            totalTaxesPaid += taxes.total;
+            closedTrades++;
+            if (net > 0) wins++;
+
+            tradeLogs.push({
+              date: t,
+              type: 'SELL (FINAL)',
+              condition: finalExitReason,
+              fillPrice: exitFill.toFixed(2),
+              qty: pos,
+              trailedSL: `₹${currentSL.toFixed(2)}`,
+              grossPnL: gross.toFixed(2),
+              charges: taxes.total.toFixed(2),
+              netPnL: net.toFixed(2),
+              ret: ((net / buyTurnover) * 100).toFixed(2) + '%',
+              pivotObj: pObj
             });
+
+            markers.push({
+              time: t, position: 'aboveBar', color: '#ef5350', shape: 'arrowDown',
+              text: `EXIT @ ₹${exitFill.toFixed(1)}`
+            });
+
+            pos = 0;
+            partialBooked = false;
           }
         }
-        // Bearish Crossover -> Sell
-        else if (fPrev >= sPrev && fNow < sNow && pos > 0) {
-          const proceeds = pos * candles[i].close;
-          capital += proceeds;
-          closedTrades++;
-          if (candles[i].close > entryPrice) wins++;
-          markers.push({
-            time: t, position: 'aboveBar', color: '#ef5350', shape: 'arrowDown',
-            text: `SELL @ ₹${candles[i].close.toFixed(1)}`
-          });
-          pos = 0;
+
+        // Check Multi-Condition Entry Rules
+        if (pos === 0) {
+          const maBullish = fNow > sNow;
+          const greenCandle = c.close > c.open;
+          const aboveVwap = c.close > vwap;
+          const trendStrong = adx >= cfg.minAdx;
+
+          let pivotConditionMet = true;
+          if (cfg.pivotRule === 'above_p' && c.close <= pObj.p) pivotConditionMet = false;
+          else if (cfg.pivotRule === 'above_r1' && c.close <= pObj.r1) pivotConditionMet = false;
+          else if (cfg.pivotRule === 'above_r2' && c.close <= pObj.r2) pivotConditionMet = false;
+
+          let passesAll = maBullish && trendStrong && pivotConditionMet;
+          if (cfg.reqVwap && !aboveVwap) passesAll = false;
+          if (cfg.reqGreen && !greenCandle) passesAll = false;
+
+          if (passesAll) {
+            pos = Math.floor(capital / c.close);
+            if (pos > 0) {
+              initialPos = pos;
+              entryPrice = c.close;
+              currentSL = entryPrice * (1 - cfg.slPct / 100);
+              partialBooked = false;
+
+              // Deduct cash invested
+              capital -= pos * entryPrice;
+
+              tradeLogs.push({
+                date: t,
+                type: 'BUY',
+                condition: `[ENTRY] MA(${cfg.fastP})>MA(${cfg.slowP}) | ADX:${adx} | Close ₹${c.close} > Open | Close > VWAP ₹${vwap} | Entry Pivot (${cfg.pivotRule})`,
+                fillPrice: entryPrice.toFixed(2),
+                qty: pos,
+                trailedSL: `₹${currentSL.toFixed(2)} (Initial -${cfg.slPct}%)`,
+                grossPnL: '-',
+                charges: '-',
+                netPnL: '-',
+                ret: '-',
+                pivotObj: pObj
+              });
+
+              markers.push({
+                time: t, position: 'belowBar', color: '#26a69a', shape: 'arrowUp',
+                text: `BUY @ ₹${entryPrice.toFixed(1)}`
+              });
+            }
+          }
         }
+
+        const currentEquity = capital + (pos * c.close);
+        if (currentEquity > peakCapital) peakCapital = currentEquity;
+        const dd = ((peakCapital - currentEquity) / peakCapital) * 100;
+        if (dd > maxDrawdown) maxDrawdown = dd;
       }
 
-      // Close open positions at final bar
+      // Auto close at period end
       if (pos > 0) {
-        capital += pos * candles[candles.length - 1].close;
+        const last = candles[candles.length - 1];
+        const buyTurnover = pos * entryPrice;
+        const sellTurnover = pos * last.close;
+        const taxes = calcIndianTaxes(buyTurnover, sellTurnover, cfg.deductTaxes);
+        const gross = sellTurnover - buyTurnover;
+        const net = gross - taxes.total;
+
+        capital += sellTurnover - taxes.total;
+        totalGrossPnL += gross;
+        totalTaxesPaid += taxes.total;
+        closedTrades++;
+        if (net > 0) wins++;
+
+        tradeLogs.push({
+          date: last.time,
+          type: 'SELL (AUTO)',
+          condition: 'END OF PERIOD: Auto square-off at last available close',
+          fillPrice: last.close.toFixed(2),
+          qty: pos,
+          trailedSL: `₹${currentSL.toFixed(2)}`,
+          grossPnL: gross.toFixed(2),
+          charges: taxes.total.toFixed(2),
+          netPnL: net.toFixed(2),
+          ret: ((net / buyTurnover) * 100).toFixed(2) + '%',
+          pivotObj: pivotMap.get(last.time) || {}
+        });
       }
 
-      const totalReturn = ((capital - 100000) / 100000) * 100;
+      // Update Dashboard Metrics
+      const totalNetReturn = ((capital - 100000) / 100000) * 100;
       const winRate = closedTrades > 0 ? (wins / closedTrades) * 100 : 0;
 
-      // Update UI
       const finalEl = document.getElementById('dispFinal');
       finalEl.innerText = `₹${capital.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
       finalEl.className = `stat-val ${capital >= 100000 ? 'green' : 'red'}`;
 
       const retEl = document.getElementById('dispReturn');
-      retEl.innerText = `${totalReturn.toFixed(2)}%`;
-      retEl.className = `stat-val ${totalReturn >= 0 ? 'green' : 'red'}`;
+      retEl.innerText = `${totalNetReturn.toFixed(2)}%`;
+      retEl.className = `stat-val ${totalNetReturn >= 0 ? 'green' : 'red'}`;
 
+      const grossEl = document.getElementById('dispGross');
+      grossEl.innerText = `₹${totalGrossPnL.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+      grossEl.className = `stat-val ${totalGrossPnL >= 0 ? 'green' : 'red'}`;
+
+      document.getElementById('dispTaxes').innerText = `₹${totalTaxesPaid.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
       document.getElementById('dispWinRate').innerText = `${winRate.toFixed(1)}%`;
       document.getElementById('dispTrades').innerText = closedTrades;
+      document.getElementById('dispDrawdown').innerText = `${maxDrawdown.toFixed(2)}%`;
 
-      // Plot series
+      // Render Table
+      const tbody = document.getElementById('tradeTableBody');
+      tbody.innerHTML = tradeLogs.map((t, idx) => {
+        const isExit = t.type.includes('SELL');
+        const netVal = parseFloat(t.netPnL);
+        const pnlClass = isExit ? (netVal >= 0 ? 'green' : 'red') : '';
+        const badgeClass = t.type.includes('BUY') ? 'badge-buy' : (t.type.includes('PARTIAL') ? 'badge-partial' : 'badge-sell');
+        const po = t.pivotObj || {};
+        const rMatrix = `R1: ${po.r1 || '-'} | R2: ${po.r2 || '-'}<br>R3: ${po.r3 || '-'} | R4: ${po.r4 || '-'}`;
+        const sMatrix = `S1: ${po.s1 || '-'} | S2: ${po.s2 || '-'}<br>S3: ${po.s3 || '-'} | S4: ${po.s4 || '-'}`;
+
+        return `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${t.date}</td>
+            <td><span class="${badgeClass}">${t.type}</span></td>
+            <td class="cond-cell">${t.condition}</td>
+            <td><strong>₹${t.fillPrice}</strong></td>
+            <td>${t.qty}</td>
+            <td>${t.trailedSL}</td>
+            <td>${isExit ? '₹' + t.grossPnL : '-'}</td>
+            <td class="red">${isExit ? '₹' + t.charges : '-'}</td>
+            <td class="${pnlClass}"><strong>${isExit ? '₹' + t.netPnL : '-'}</strong></td>
+            <td class="${pnlClass}">${t.ret}</td>
+            <td class="matrix-cell">${rMatrix}</td>
+            <td class="matrix-cell">${sMatrix}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // Render Chart Series
       initChart();
       candleSeries.setData(candles);
       fastLine.setData(Array.from(fastMap, ([time, value]) => ({ time, value })));
       slowLine.setData(Array.from(slowMap, ([time, value]) => ({ time, value })));
+      vwapLine.setData(Array.from(vwapMap, ([time, value]) => ({ time, value })));
+
+      pivotSeries['p'].setData(pivotList.map(d => ({ time: d.time, value: d.p })));
+      for (let i = 1; i <= 5; i++) {
+        pivotSeries['r' + i].setData(pivotList.map(d => ({ time: d.time, value: d['r' + i] })));
+        pivotSeries['s' + i].setData(pivotList.map(d => ({ time: d.time, value: d['s' + i] })));
+      }
+
       candleSeries.setMarkers(markers);
       chart.timeScale().fitContent();
     }
 
-    // Direct Browser Fetch via Public Proxy
     async function fetchAndTest() {
       let symbol = document.getElementById('ticker').value.trim();
       if (!symbol.includes('.')) symbol += '.NS';
       const range = document.getElementById('range').value;
-      const fVal = parseInt(document.getElementById('fastMa').value);
-      const sVal = parseInt(document.getElementById('slowMa').value);
+
+      const cfg = {
+        fastP: parseInt(document.getElementById('fastMa').value),
+        slowP: parseInt(document.getElementById('slowMa').value),
+        minAdx: parseFloat(document.getElementById('minAdx').value),
+        pivotRule: document.getElementById('pivotRule').value,
+        tp1Mode: document.getElementById('tp1Mode').value,
+        tp2Mode: document.getElementById('tp2Mode').value,
+        tpPct: parseFloat(document.getElementById('targetPct').value),
+        slPct: parseFloat(document.getElementById('stopLossPct').value),
+        trailMode: document.getElementById('trailMode').value,
+        partialBooking: document.getElementById('partialBooking').checked,
+        deductTaxes: document.getElementById('deductTaxes').checked,
+        reqVwap: document.getElementById('reqVwap').checked,
+        reqGreen: document.getElementById('reqGreen').checked
+      };
 
       const target = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${range}&interval=1d`;
       const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
@@ -256,46 +850,22 @@
 
         const candles = [];
         for (let i = 0; i < timestamps.length; i++) {
-          if (q.open[i] && q.close[i]) {
+          if (q.open[i] && q.close[i] && q.high[i] && q.low[i]) {
             const d = new Date(timestamps[i] * 1000);
             candles.push({
               time: d.toISOString().split('T')[0],
               open: +q.open[i].toFixed(2),
               high: +q.high[i].toFixed(2),
               low: +q.low[i].toFixed(2),
-              close: +q.close[i].toFixed(2)
+              close: +q.close[i].toFixed(2),
+              volume: q.volume ? q.volume[i] : 100000
             });
           }
         }
-        simulateStrategy(candles, fVal, sVal);
+        simulateStrategy(candles, cfg);
       } catch (err) {
-        alert("Failed to load live data. You can export a CSV from Kite/Groww and click 'Upload CSV' instead.");
+        alert("Failed to fetch market data. Verify symbol (e.g., RELIANCE.NS, TCS.NS, INFY.NS).");
       }
-    }
-
-    // Offline CSV Parser (Zerodha Kite & NSE format)
-    function loadCSV(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const lines = e.target.result.split('\n');
-        const candles = [];
-        for (let i = 1; i < lines.length; i++) {
-          const cols = lines[i].split(',');
-          if (cols.length >= 5) {
-            candles.push({
-              time: cols[0].trim().split(' ')[0],
-              open: parseFloat(cols[1]),
-              high: parseFloat(cols[2]),
-              low: parseFloat(cols[3]),
-              close: parseFloat(cols[4])
-            });
-          }
-        }
-        simulateStrategy(candles, 20, 50);
-      };
-      reader.readAsText(file);
     }
 
     window.onload = fetchAndTest;
